@@ -1,10 +1,9 @@
 import http from 'node:http'
 
 const PORT = process.env.PORT || 3000
-const HOST = process.env.HOST_URL || `http://localhost:${PORT}`
 
-function renderFrameHtml({ title, imageText, buttonText, postUrl }) {
-  const imageUrl = `${HOST}/image?text=${encodeURIComponent(imageText)}`
+function renderFrameHtml({ title, imageText, buttonText, postUrl, baseUrl }) {
+  const imageUrl = `${baseUrl}/image?text=${encodeURIComponent(imageText)}`
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -26,57 +25,58 @@ function renderSvg(text) {
   </svg>`
 }
 
-const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`)
+const server = http.createServer((req, res) => {
+  const proto = req.headers['x-forwarded-proto'] || 'http'
+  const host = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${PORT}`
+  const baseUrl = `${proto}://${host}`
+  const url = new URL(req.url, baseUrl)
 
-  // 1. Dynamic SVG image (no external host needed)
+  // 1. Dynamic SVG
   if (url.pathname === '/image') {
     const text = url.searchParams.get('text') || 'Farcaster Frame'
     res.writeHead(200, { 'Content-Type': 'image/svg+xml' })
     return res.end(renderSvg(text))
   }
 
-  // 2. Initial Frame (GET /)
-  if (req.method === 'GET' && url.pathname === '/') {
-    const html = renderFrameHtml({
-      title: 'Lazy Frame',
-      imageText: 'Click button to interact',
-      buttonText: 'Click me!',
-      postUrl: `${HOST}/api/frame`,
-    })
-    res.writeHead(200, { 'Content-Type': 'text/html' })
-    return res.end(html)
-  }
-
-  // 3. Frame Action (POST /api/frame)
-  if (req.method === 'POST' && url.pathname === '/api/frame') {
+  // 2. Action (POST)
+  if (req.method === 'POST') {
     let body = ''
     req.on('data', chunk => { body += chunk })
     req.on('end', () => {
       let fid = 'Anon'
       try {
-        const parsed = JSON.parse(body)
-        fid = parsed?.untrustedData?.fid || 'Anon'
-      } catch {
-        // ponytail: fallback if payload is empty/form-data
-      }
+        fid = JSON.parse(body)?.untrustedData?.fid || 'Anon'
+      } catch {}
 
       const html = renderFrameHtml({
         title: 'Frame Response',
         imageText: `Hello FID #${fid}! Success.`,
         buttonText: 'Reset',
-        postUrl: `${HOST}/`,
+        postUrl: `${baseUrl}/`,
+        baseUrl,
       })
-      res.writeHead(200, { 'Content-Type': 'text/html' })
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
       res.end(html)
     })
     return
   }
 
-  res.writeHead(404)
-  res.end('Not found')
+  // 3. Initial Frame (GET /)
+  if (req.method === 'GET') {
+    const html = renderFrameHtml({
+      title: 'Lazy Frame',
+      imageText: 'Click button to interact',
+      buttonText: 'Click me!',
+      postUrl: `${baseUrl}/api/frame`,
+      baseUrl,
+    })
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+    return res.end(html)
+  }
+
+  res.writeHead(404).end('Not found')
 })
 
 server.listen(PORT, () => {
-  console.log(`Frame server running at ${HOST}`)
+  console.log(`Server listening on port ${PORT}`)
 })
