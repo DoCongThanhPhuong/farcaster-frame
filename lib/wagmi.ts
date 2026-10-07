@@ -5,9 +5,10 @@ import { injected } from '@wagmi/core';
 
 export const wagmiConfig = createConfig({
   chains: [base, baseSepolia],
+  ssr: true,
   connectors: [
-    farcasterMiniApp(),
     injected(),
+    farcasterMiniApp(),
   ],
   transports: {
     [base.id]: http(),
