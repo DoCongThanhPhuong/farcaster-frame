@@ -538,10 +538,22 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
             spawnParticles(tb.x + tb.w / 2, tb.y + tb.h / 2, '#EF4444', 12);
             stateRef.current.deathReason = tb.reason;
             setDeathReason(tb.reason);
+            player.y = tb.y + tb.h;
+            player.vy = 5;
+            player.vx = 0;
+          } else {
+            if (player.vy > 0 && player.y + player.height - player.vy <= tb.y + 6) {
+              player.y = tb.y - player.height;
+              player.vy = 0;
+              player.grounded = true;
+            } else if (player.vy < 0) {
+              player.y = tb.y + tb.h;
+              player.vy = 3;
+            } else {
+              if (player.vx > 0) player.x = tb.x - player.width;
+              else if (player.vx < 0) player.x = tb.x + tb.w;
+            }
           }
-          player.y = tb.y + tb.h;
-          player.vy = 5;
-          player.vx = 0;
         }
       }
 
