@@ -9,6 +9,7 @@ import { DailyStreakCard } from './DailyStreakCard';
 import { OnchainMintCard } from './OnchainMintCard';
 import { ShareCastCard } from './ShareCastCard';
 import { BuilderAirdropGuideModal } from './BuilderAirdropGuideModal';
+import { BaseMarioGame } from './BaseMarioGame';
 
 export function AirdropApp() {
   const { isConnected } = useAccount();
@@ -23,6 +24,8 @@ export function AirdropApp() {
   const [customFid, setCustomFid] = useState<number | null>(null);
   const [streakDays, setStreakDays] = useState(0);
   const [hasMintedPass, setHasMintedPass] = useState(false);
+  const [activeTab, setActiveTab] = useState<'airdrop' | 'game'>('airdrop');
+  const [gameHighScore, setGameHighScore] = useState(0);
 
   const activeFid = customFid || user?.fid || null;
 
@@ -36,6 +39,10 @@ export function AirdropApp() {
 
       const savedPass = localStorage.getItem(passKey) || localStorage.getItem('fc_airdrop_has_minted_pass');
       if (savedPass === 'true') setHasMintedPass(true);
+
+      const gameKey = activeFid ? `fc_mario_highscore_${activeFid}` : 'fc_mario_highscore';
+      const savedGame = localStorage.getItem(gameKey);
+      if (savedGame) setGameHighScore(parseInt(savedGame, 10) || 0);
     } catch {}
   }, [activeFid]);
 
@@ -101,28 +108,72 @@ export function AirdropApp() {
           isWalletConnected={isConnected}
           streakDays={streakDays}
           hasMintedPass={hasMintedPass}
+          gameHighScore={gameHighScore}
           onFidChange={(f) => setCustomFid(f)}
           isInMiniApp={isInMiniApp}
         />
 
-        <DailyStreakCard
-          streakDays={streakDays}
-          onCheckIn={handleCheckIn}
-          fid={activeFid}
-        />
+        {/* Tab Switcher */}
+        <div className="flex rounded-xl bg-gray-900/90 p-1 border border-gray-800 shadow-md">
+          <button
+            onClick={() => setActiveTab('airdrop')}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'airdrop'
+                ? 'bg-purple-600 text-white shadow-lg'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <span>🪂 Nhiệm Vụ Airdrop</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('game')}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'game'
+                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <span>🎮 Base Mario Arcade</span>
+            <span className="px-1.5 py-0.5 rounded-full bg-yellow-400/20 text-yellow-300 text-[10px] font-extrabold">
+              {gameHighScore > 0 ? `${gameHighScore} pts` : 'HOT'}
+            </span>
+          </button>
+        </div>
 
-        <OnchainMintCard
-          hasMintedPass={hasMintedPass}
-          onPassMinted={handlePassMinted}
-          fid={activeFid}
-        />
+        {activeTab === 'airdrop' ? (
+          <>
+            <DailyStreakCard
+              streakDays={streakDays}
+              onCheckIn={handleCheckIn}
+              fid={activeFid}
+            />
 
-        <ShareCastCard
-          fid={activeFid}
-          streakDays={streakDays}
-        />
+            <OnchainMintCard
+              hasMintedPass={hasMintedPass}
+              onPassMinted={handlePassMinted}
+              fid={activeFid}
+            />
 
-        <BuilderAirdropGuideModal />
+            <ShareCastCard
+              fid={activeFid}
+              streakDays={streakDays}
+            />
+
+            <BuilderAirdropGuideModal />
+          </>
+        ) : (
+          <>
+            <BaseMarioGame
+              fid={activeFid}
+              onHighScoreChange={(s) => setGameHighScore(s)}
+            />
+
+            <ShareCastCard
+              fid={activeFid}
+              streakDays={streakDays}
+            />
+          </>
+        )}
 
         <footer className="text-center text-[11px] text-gray-500 py-4">
           Farcaster Frame v2 / Mini App • Built for Farcaster &amp; Base Builder Ecosystem

@@ -10,6 +10,7 @@ interface EligibilityProps {
   isWalletConnected: boolean;
   streakDays: number;
   hasMintedPass: boolean;
+  gameHighScore?: number;
   onFidChange?: (fid: number) => void;
   isInMiniApp: boolean;
 }
@@ -22,6 +23,7 @@ export function AirdropEligibilityCard({
   isWalletConnected,
   streakDays,
   hasMintedPass,
+  gameHighScore,
   onFidChange,
   isInMiniApp,
 }: EligibilityProps) {
@@ -40,7 +42,7 @@ export function AirdropEligibilityCard({
   if (isWalletConnected) multiplier += 0.3;
   if (streakDays > 0) multiplier += streakDays * 0.15;
   if (hasMintedPass) multiplier += 0.5;
-
+  if (gameHighScore && gameHighScore >= 100) multiplier += 0.2;
   const totalPoints = Math.round(fidPoints * multiplier);
   const estimatedFarTokens = (totalPoints * 0.42).toFixed(1);
 
@@ -141,7 +143,7 @@ export function AirdropEligibilityCard({
       </div>
 
       {/* Multipliers & Tasks Grid */}
-      <div className="grid grid-cols-3 gap-2 text-center">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
         <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-2.5">
           <div className="text-xs text-gray-400 mb-1 flex items-center justify-center gap-1">
             <Zap className="w-3 h-3 text-purple-400" />
@@ -171,6 +173,17 @@ export function AirdropEligibilityCard({
             {hasMintedPass ? '+0.5x Active' : 'Unminted'}
           </div>
           <div className="text-[10px] text-gray-500">Base Onchain</div>
+        </div>
+
+        <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-2.5">
+          <div className="text-xs text-gray-400 mb-1 flex items-center justify-center gap-1">
+            <Trophy className="w-3 h-3 text-yellow-400" />
+            Arcade
+          </div>
+          <div className={`text-sm font-bold ${gameHighScore && gameHighScore >= 100 ? 'text-yellow-400' : 'text-gray-400'}`}>
+            {gameHighScore && gameHighScore >= 100 ? '+0.2x Active' : `${gameHighScore || 0}/100`}
+          </div>
+          <div className="text-[10px] text-gray-500">Base Mario</div>
         </div>
       </div>
     </div>
