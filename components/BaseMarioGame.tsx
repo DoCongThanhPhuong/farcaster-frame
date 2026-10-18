@@ -197,14 +197,31 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
     const key = fid ? `fc_farbase_highscore_${fid}` : 'fc_farbase_highscore';
     const deathKey = fid ? `fc_farbase_deaths_${fid}` : 'fc_farbase_deaths';
     try {
-      const savedScore = localStorage.getItem(key) || localStorage.getItem(`fc_mario_highscore_${fid}`) || localStorage.getItem('fc_mario_highscore');
+      let savedScore = localStorage.getItem(key);
+      if (!savedScore) {
+        const oldKey = fid ? `fc_mario_highscore_${fid}` : 'fc_mario_highscore';
+        savedScore = localStorage.getItem(oldKey);
+        if (savedScore) {
+          localStorage.setItem(key, savedScore);
+          localStorage.removeItem(oldKey);
+        }
+      }
       if (savedScore) {
         const val = parseInt(savedScore, 10) || 0;
         setHighScore(val);
         stateRef.current.highScore = val;
         onHighScoreChange?.(val);
       }
-      const savedDeaths = localStorage.getItem(deathKey) || localStorage.getItem(`fc_mario_deaths_${fid}`) || localStorage.getItem('fc_mario_deaths');
+
+      let savedDeaths = localStorage.getItem(deathKey);
+      if (!savedDeaths) {
+        const oldDeathKey = fid ? `fc_mario_deaths_${fid}` : 'fc_mario_deaths';
+        savedDeaths = localStorage.getItem(oldDeathKey);
+        if (savedDeaths) {
+          localStorage.setItem(deathKey, savedDeaths);
+          localStorage.removeItem(oldDeathKey);
+        }
+      }
       if (savedDeaths) {
         const dVal = parseInt(savedDeaths, 10) || 0;
         setDeaths(dVal);
@@ -281,7 +298,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       { x: 235, y: 165, w: 25, h: 25, type: 'brick' },
 
       { x: 380, y: 145, w: 75, h: 20, type: 'brick' },
-      { x: 420, y: 95, w: 25, h: 25, type: 'question' },
+      { x: 405, y: 72, w: 25, h: 25, type: 'question' },
 
       { x: 880, y: 165, w: 25, h: 25, type: 'question' },
       { x: 930, y: 165, w: 60, h: 20, type: 'brick' },
@@ -326,7 +343,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       { x: 172, y: 135, type: 'base', collected: false, tick: 0 },
       { x: 222, y: 135, type: 'farcaster', collected: false, tick: 1 },
       { x: 395, y: 115, type: 'base', collected: false, tick: 2 },
-      { x: 432, y: 65, type: 'farcaster', collected: false, tick: 3 },
+      { x: 417, y: 40, type: 'farcaster', collected: false, tick: 3 },
       { x: 640, y: 200, type: 'base', collected: false, tick: 4 },
       { x: 892, y: 135, type: 'farcaster', collected: false, tick: 5 },
       { x: 955, y: 135, type: 'fake_airdrop', collected: false, tick: 6 },
@@ -504,6 +521,14 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
 
             if (p.type === 'rugpull' && !p.falling && !p.shake) {
               p.shake = 16;
+            }
+            if (p.type === 'question' && !p.hit) {
+              p.hit = true;
+              audio.powerUp();
+              stateRef.current.score += 50;
+              setScore(stateRef.current.score);
+              spawnFloatingText(p.x, p.y - 15, '+50', '#855DCD');
+              spawnParticles(p.x + p.w / 2, p.y, '#FBBF24', 10);
             }
           } else if (player.vy < 0 && player.y - player.vy >= p.y + p.h - 6) {
             player.y = p.y + p.h;
