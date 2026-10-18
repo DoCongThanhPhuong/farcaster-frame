@@ -30,7 +30,6 @@ export async function GET(req: Request) {
       buttonTitle: 'Check & Claim Airdrop',
       splashImageUrl: `${baseUrl}/splash.png`,
       splashBackgroundColor: '#0f0e17',
-      webhookUrl: `${baseUrl}/api/webhook`,
     },
   };
 

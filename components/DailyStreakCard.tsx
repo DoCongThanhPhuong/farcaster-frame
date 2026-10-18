@@ -7,20 +7,29 @@ import sdk from '@farcaster/frame-sdk';
 interface DailyStreakCardProps {
   streakDays: number;
   onCheckIn: (newStreak: number) => void;
+  fid?: number | null;
 }
 
-export function DailyStreakCard({ streakDays, onCheckIn }: DailyStreakCardProps) {
+export function DailyStreakCard({ streakDays, onCheckIn, fid }: DailyStreakCardProps) {
   const [canClaim, setCanClaim] = useState(true);
   const [hoursRemaining, setHoursRemaining] = useState<number | null>(null);
 
   useEffect(() => {
+    const lastCheckinKey = fid ? `fc_last_checkin_${fid}` : 'fc_airdrop_last_checkin';
+    const streakKey = fid ? `fc_streak_${fid}` : 'fc_airdrop_streak';
     try {
-      const lastCheckIn = localStorage.getItem('fc_airdrop_last_checkin');
+      const lastCheckIn = localStorage.getItem(lastCheckinKey) || localStorage.getItem('fc_airdrop_last_checkin');
       if (lastCheckIn) {
         const lastTime = parseInt(lastCheckIn, 10);
         const now = Date.now();
         const diffMs = now - lastTime;
         const cooldown = 24 * 60 * 60 * 1000; // 24 hours
+
+        // If missed check-in by more than 48 hours, streak resets
+        if (diffMs > 48 * 60 * 60 * 1000 && streakDays > 0) {
+          onCheckIn(0);
+          localStorage.setItem(streakKey, '0');
+        }
 
         if (diffMs < cooldown) {
           setCanClaim(false);
@@ -31,19 +40,29 @@ export function DailyStreakCard({ streakDays, onCheckIn }: DailyStreakCardProps)
         }
       }
     } catch {}
-  }, [streakDays]);
+  }, [streakDays, fid]);
 
   const handleClaim = () => {
-    const nextStreak = streakDays + 1;
+    const lastCheckinKey = fid ? `fc_last_checkin_${fid}` : 'fc_airdrop_last_checkin';
+    const streakKey = fid ? `fc_streak_${fid}` : 'fc_airdrop_streak';
+    let nextStreak = 1;
     try {
-      localStorage.setItem('fc_airdrop_last_checkin', Date.now().toString());
-      localStorage.setItem('fc_airdrop_streak', nextStreak.toString());
-    } catch {}
+      const lastCheckIn = localStorage.getItem(lastCheckinKey) || localStorage.getItem('fc_airdrop_last_checkin');
+      const lastTime = lastCheckIn ? parseInt(lastCheckIn, 10) : 0;
+      const now = Date.now();
+      const diffMs = now - lastTime;
+      const missedStreak = lastTime > 0 && diffMs > 48 * 60 * 60 * 1000;
+      nextStreak = missedStreak || streakDays === 0 ? 1 : streakDays + 1;
 
+      localStorage.setItem(lastCheckinKey, now.toString());
+      localStorage.setItem(streakKey, nextStreak.toString());
+    } catch {
+      nextStreak = streakDays + 1;
+    }
     // Trigger haptics if on mobile Warpcast
     try {
-      if ((sdk as any)?.haptics?.notificationOccurred) {
-        (sdk as any).haptics.notificationOccurred('success');
+      if ('haptics' in sdk && sdk.haptics && typeof sdk.haptics === 'object' && 'notificationOccurred' in sdk.haptics && typeof sdk.haptics.notificationOccurred === 'function') {
+        sdk.haptics.notificationOccurred('success');
       }
     } catch {}
 

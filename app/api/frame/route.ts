@@ -12,7 +12,10 @@ export async function POST(req: Request) {
   let fid = 'User';
   try {
     const body = await req.json();
-    fid = body?.untrustedData?.fid ? String(body.untrustedData.fid) : 'User';
+    const rawFid = body?.untrustedData?.fid;
+    if (rawFid !== undefined && rawFid !== null && Number.isInteger(Number(rawFid)) && Number(rawFid) > 0) {
+      fid = String(Number(rawFid));
+    }
   } catch {}
 
   const html = `<!DOCTYPE html>

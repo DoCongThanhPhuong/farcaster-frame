@@ -5,15 +5,20 @@ import './globals.css';
 import { Providers } from './providers';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const headersList = await headers();
-  const host =
-    process.env.NEXT_PUBLIC_HOST ||
-    headersList.get('x-forwarded-host') ||
-    headersList.get('host') ||
-    'localhost:3000';
-  const proto = headersList.get('x-forwarded-proto') || 'https';
-  const baseUrl = `${proto}://${host}`;
+  let host = process.env.NEXT_PUBLIC_HOST;
+  let proto = 'https';
 
+  if (!host) {
+    try {
+      const headersList = await headers();
+      host = headersList.get('x-forwarded-host') || headersList.get('host') || 'localhost:3000';
+      proto = headersList.get('x-forwarded-proto') || 'https';
+    } catch {
+      host = 'localhost:3000';
+    }
+  }
+
+  const baseUrl = host.startsWith('http') ? host : `${proto}://${host}`;
   const frameMetadata = {
     version: 'next',
     imageUrl: `${baseUrl}/opengraph-image`,
@@ -30,6 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 
   return {
+    metadataBase: new URL(baseUrl),
     title: 'Farcaster & Base Builder Airdrop',
     description:
       'Check Farcaster builder airdrop eligibility, claim daily streak, and mint verified onchain pass on Base.',

@@ -5,3 +5,7 @@ out
 .env
 .env.local
 .DS_Store
+
+# GitNexus
+.gitnexus/
+.claude/skills/gitnexus/

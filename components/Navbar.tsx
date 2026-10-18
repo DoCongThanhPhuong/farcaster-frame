@@ -1,6 +1,6 @@
 'use client';
 
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, type Connector } from 'wagmi';
 import { Bookmark, Wallet, LogOut, Sparkles, X, Loader2, AlertCircle } from 'lucide-react';
 import sdk from '@farcaster/frame-sdk';
 import { useState } from 'react';
@@ -25,9 +25,8 @@ export function Navbar({ user, isInMiniApp }: NavbarProps) {
 
   const handleAddMiniApp = async () => {
     try {
-      const pinAction = (sdk.actions as any).addFrame || (sdk.actions as any).addMiniApp;
-      if (pinAction) {
-        await pinAction.call(sdk.actions);
+      if ('addFrame' in sdk.actions && typeof sdk.actions.addFrame === 'function') {
+        await sdk.actions.addFrame();
         setPinned(true);
       }
     } catch (err) {
@@ -61,7 +60,7 @@ export function Navbar({ user, isInMiniApp }: NavbarProps) {
     setShowWalletModal(true);
   };
 
-  const handleSelectConnector = (connector: any) => {
+  const handleSelectConnector = (connector: Connector) => {
     setConnectError(null);
     connect(
       { connector },

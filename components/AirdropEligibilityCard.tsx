@@ -25,14 +25,16 @@ export function AirdropEligibilityCard({
   onFidChange,
   isInMiniApp,
 }: EligibilityProps) {
-  const currentFid = fid || 34105;
+  const hasFid = fid !== null && fid > 0;
+  const currentFid = hasFid ? fid : null;
 
   // Seniority points
-  let fidPoints = 1200;
-  if (currentFid < 10000) fidPoints = 8500;
-  else if (currentFid < 50000) fidPoints = 4800;
-  else if (currentFid < 200000) fidPoints = 2600;
-
+  let fidPoints = hasFid ? 1200 : 0;
+  if (hasFid && currentFid) {
+    if (currentFid < 10000) fidPoints = 8500;
+    else if (currentFid < 50000) fidPoints = 4800;
+    else if (currentFid < 200000) fidPoints = 2600;
+  }
   // Multipliers
   let multiplier = 1.0;
   if (isWalletConnected) multiplier += 0.3;
@@ -42,7 +44,7 @@ export function AirdropEligibilityCard({
   const totalPoints = Math.round(fidPoints * multiplier);
   const estimatedFarTokens = (totalPoints * 0.42).toFixed(1);
 
-  let tier = 'Early Adopter';
+  let tier = hasFid ? 'Early Adopter' : 'Explorer';
   let tierColor = 'text-blue-400 border-blue-500/40 bg-blue-950/30';
   if (totalPoints > 10000) {
     tier = 'OG Legend';
@@ -81,7 +83,7 @@ export function AirdropEligibilityCard({
               </span>
             </div>
             <p className="text-xs text-gray-400 flex items-center gap-1.5 mt-0.5">
-              <span>FID: #{currentFid}</span>
+              <span>{hasFid ? `FID: #${currentFid}` : 'FID: Not connected'}</span>
               {username && <span>• @{username}</span>}
               {!isInMiniApp && (
                 <span className="text-[10px] bg-gray-800 px-1 rounded text-gray-400">Preview Mode</span>
@@ -96,7 +98,7 @@ export function AirdropEligibilityCard({
               type="number"
               placeholder="Custom FID"
               className="w-24 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
-              defaultValue={currentFid}
+              defaultValue={currentFid || ''}
               onBlur={(e) => {
                 const val = parseInt(e.target.value);
                 if (val > 0) onFidChange(val);

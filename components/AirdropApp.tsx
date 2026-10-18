@@ -24,20 +24,27 @@ export function AirdropApp() {
   const [streakDays, setStreakDays] = useState(0);
   const [hasMintedPass, setHasMintedPass] = useState(false);
 
+  const activeFid = customFid || user?.fid || null;
+
   useEffect(() => {
     // 1. Restore local data
     try {
-      const savedStreak = localStorage.getItem('fc_airdrop_streak');
+      const streakKey = activeFid ? `fc_streak_${activeFid}` : 'fc_airdrop_streak';
+      const passKey = activeFid ? `fc_pass_${activeFid}` : 'fc_airdrop_has_minted_pass';
+      const savedStreak = localStorage.getItem(streakKey) || localStorage.getItem('fc_airdrop_streak');
       if (savedStreak) setStreakDays(parseInt(savedStreak, 10) || 0);
 
-      const savedPass = localStorage.getItem('fc_airdrop_has_minted_pass');
+      const savedPass = localStorage.getItem(passKey) || localStorage.getItem('fc_airdrop_has_minted_pass');
       if (savedPass === 'true') setHasMintedPass(true);
     } catch {}
+  }, [activeFid]);
 
+  useEffect(() => {
     // 2. Initialize Farcaster Mini App SDK
     const initSdk = async () => {
       try {
-        const inMiniApp = typeof (sdk as any).isInMiniApp === 'function' ? (sdk as any).isInMiniApp() : true;
+        const context = await sdk.context;
+        const inMiniApp = Boolean(context?.client);
         setIsInMiniApp(inMiniApp);
 
         // Tell Warpcast the Mini App has loaded and can hide the splash screen
@@ -46,7 +53,6 @@ export function AirdropApp() {
         }
 
         // Fetch context
-        const context = await sdk.context;
         if (context?.user) {
           setUser({
             fid: context.user.fid,
@@ -56,25 +62,24 @@ export function AirdropApp() {
           });
         }
       } catch (err) {
+        setIsInMiniApp(false);
         console.warn('Farcaster SDK init outside Warpcast:', err);
       }
     };
 
     initSdk();
   }, []);
-
   const handlePassMinted = () => {
     setHasMintedPass(true);
     try {
-      localStorage.setItem('fc_airdrop_has_minted_pass', 'true');
+      const passKey = activeFid ? `fc_pass_${activeFid}` : 'fc_airdrop_has_minted_pass';
+      localStorage.setItem(passKey, 'true');
     } catch {}
   };
 
   const handleCheckIn = (newStreak: number) => {
     setStreakDays(newStreak);
   };
-
-  const activeFid = customFid || user?.fid || null;
 
   return (
     <div className="min-h-screen bg-[#0c0d16] text-gray-100 flex flex-col">
@@ -103,6 +108,7 @@ export function AirdropApp() {
         <DailyStreakCard
           streakDays={streakDays}
           onCheckIn={handleCheckIn}
+          fid={activeFid}
         />
 
         <OnchainMintCard

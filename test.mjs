@@ -61,5 +61,4 @@ try {
   try {
     process.kill(-child.pid, 'SIGKILL');
   } catch {}
-  process.exit(0);
 }

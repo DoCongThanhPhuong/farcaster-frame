@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { useAccount, useSendTransaction, useSignMessage } from 'wagmi';
+import { useState, useEffect } from 'react';
+import { useAccount, useSendTransaction, useSignMessage, useSwitchChain, useWaitForTransactionReceipt } from 'wagmi';
+import { base, baseSepolia } from 'wagmi/chains';
 import { parseEther } from 'viem';
 import { Award, Check, ExternalLink, Loader2, Sparkles, Key } from 'lucide-react';
 
@@ -15,12 +16,22 @@ export function OnchainMintCard({ hasMintedPass, onPassMinted, fid }: OnchainMin
   const { address, isConnected, chain } = useAccount();
   const { sendTransactionAsync } = useSendTransaction();
   const { signMessageAsync } = useSignMessage();
+  const { switchChainAsync } = useSwitchChain();
 
   const [isLoading, setIsLoading] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [signedMsg, setSignedMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const { isSuccess: isTxSuccess } = useWaitForTransactionReceipt({
+    hash: (txHash as `0x${string}`) || undefined,
+  });
+
+  useEffect(() => {
+    if (isTxSuccess) {
+      onPassMinted();
+    }
+  }, [isTxSuccess]);
   // 1. Onchain Transaction (Mint pass on Base)
   const handleOnchainMint = async () => {
     if (!isConnected || !address) {
@@ -31,6 +42,20 @@ export function OnchainMintCard({ hasMintedPass, onPassMinted, fid }: OnchainMin
     setIsLoading(true);
 
     try {
+      if (chain?.id !== base.id && chain?.id !== baseSepolia.id) {
+        if (switchChainAsync) {
+          try {
+            await switchChainAsync({ chainId: base.id });
+          } catch {
+            setError('Please switch your wallet to Base network.');
+            return;
+          }
+        } else {
+          setError('Please switch your wallet to Base network.');
+          return;
+        }
+      }
+
       // 0 ETH commemorative mint to burn address with custom Farcaster calldata
       // "0x6661726361737465725f6275696c646572" = "farcaster_builder"
       const hash = await sendTransactionAsync({
@@ -40,12 +65,14 @@ export function OnchainMintCard({ hasMintedPass, onPassMinted, fid }: OnchainMin
       });
 
       setTxHash(hash);
-      onPassMinted();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Mint error:', err);
-      // If user rejects tx or doesn't have Base funds, offer sign message fallback
-      setError(err?.shortMessage || err?.message || 'Transaction failed. Try Gasless Sign.');
-    } finally {
+      const message = err && typeof err === 'object' && 'shortMessage' in err && typeof err.shortMessage === 'string'
+        ? err.shortMessage
+        : err instanceof Error
+        ? err.message
+        : 'Transaction failed. Try Gasless Sign.';
+      setError(message);
       setIsLoading(false);
     }
   };
@@ -64,10 +91,14 @@ export function OnchainMintCard({ hasMintedPass, onPassMinted, fid }: OnchainMin
       const sig = await signMessageAsync({ message });
       setSignedMsg(sig);
       onPassMinted();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Sign error:', err);
-      setError(err?.shortMessage || err?.message || 'Signature rejected.');
-    } finally {
+      const message = err && typeof err === 'object' && 'shortMessage' in err && typeof err.shortMessage === 'string'
+        ? err.shortMessage
+        : err instanceof Error
+        ? err.message
+        : 'Signature rejected.';
+      setError(message);
       setIsLoading(false);
     }
   };
