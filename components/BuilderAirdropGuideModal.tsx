@@ -37,7 +37,7 @@ export function BuilderAirdropGuideModal() {
             <div className="p-3 bg-purple-950/30 border border-purple-800/40 rounded-xl space-y-1">
               <p className="font-semibold text-purple-200">What is this Mini App?</p>
               <p className="text-gray-300">
-                A verified Farcaster Frame v2 on Base L2 designed to reward builders, drive daily engagement (DAU), and generate onchain transactions for ecosystem builder grants.
+                A verified Farcaster Mini App on Base L2 designed to reward builders, drive daily engagement (DAU), and generate onchain transactions for ecosystem builder grants.
               </p>
             </div>
 

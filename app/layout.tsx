@@ -26,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: '🪂 Check & Claim Airdrop',
       action: {
         type: 'launch_frame',
-        name: 'Farcaster Airdrop',
+        name: 'FarBase',
         url: baseUrl,
         splashImageUrl: `${baseUrl}/splash.png`,
         splashBackgroundColor: '#0d0e15',
@@ -36,12 +36,19 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase: new URL(baseUrl),
-    title: 'Farcaster & Base Builder Airdrop',
+    title: 'FarBase | Farcaster & Base Builder Rewards',
     description:
-      'Check Farcaster builder airdrop eligibility, claim daily streak, and mint verified onchain pass on Base.',
+      'Check Farcaster builder airdrop eligibility, claim daily streak, play FarBase Rush, and mint verified onchain pass on Base.',
+    icons: {
+      icon: [
+        { url: '/icon.png', type: 'image/png' },
+      ],
+      shortcut: '/icon.png',
+      apple: '/icon.png',
+    },
     openGraph: {
-      title: 'Farcaster & Base Builder Airdrop',
-      description: 'Mini App v2 on Warpcast & Base for Farcaster builder rewards.',
+      title: 'FarBase | Farcaster & Base Builder Rewards',
+      description: 'Farcaster Mini App on Warpcast & Base for builder rewards.',
       images: [`${baseUrl}/opengraph-image`],
     },
     other: {

@@ -171,7 +171,7 @@ export function AirdropApp() {
         )}
 
         <footer className="text-center text-[11px] text-gray-500 py-4">
-          Farcaster Frame v2 / Mini App • Built for Farcaster &amp; Base Builder Ecosystem
+          Farcaster Mini App • Built for Farcaster &amp; Base Builder Ecosystem
         </footer>
       </main>
     </div>

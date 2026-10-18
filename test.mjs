@@ -42,6 +42,8 @@ try {
   assert.strictEqual(resSplash.status, 200);
   assert.strictEqual(resSplash.headers.get('content-type'), 'image/png');
 
+  const resFavicon = await fetch(`http://localhost:${PORT}/favicon.ico`, { redirect: 'manual' });
+  assert(resFavicon.status === 200 || resFavicon.status === 307 || resFavicon.status === 308, 'Favicon failed');
   const resPost = await fetch(`http://localhost:${PORT}/api/frame`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

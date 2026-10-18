@@ -161,6 +161,7 @@ const TROLL_DEATH_MESSAGES = [
   'Bonked head on an invisible block and plunged into the abyss! 😈',
   'Platform dev rugpulled right under your feet! 📉',
   'Greedily grabbed a fake scam 10K$ airdrop coin! 🤡',
+  'Fell through a hollow trap column into the abyss! 🕳️',
   'Goal flagpole ran away to tease you! 🏃💨',
   'Liquidated by the FUD market cap monster! 🐻',
   'Crushed by an instant Base gas fee spike! ⛽',
@@ -175,7 +176,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
   const [deaths, setDeaths] = useState(0);
   const [deathReason, setDeathReason] = useState('Liquidated by market volatility! 📉');
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [lives, setLives] = useState(3);
+  const [lives, setLives] = useState(5);
   const [showGuide, setShowGuide] = useState(false);
 
   const keysRef = useRef<{ left: boolean; right: boolean; jump: boolean }>({
@@ -190,7 +191,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
     highScore: 0,
     deaths: 0,
     deathReason: 'Liquidated by market volatility! 📉',
-    lives: 3,
+    lives: 5,
   });
 
   useEffect(() => {
@@ -239,10 +240,10 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
   const startGame = useCallback(() => {
     setGameState('playing');
     setScore(0);
-    setLives(3);
+    setLives(5);
     stateRef.current.gameState = 'playing';
     stateRef.current.score = 0;
-    stateRef.current.lives = 3;
+    stateRef.current.lives = 5;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -262,7 +263,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       vx: 0,
       vy: 0,
       speed: 3.5,
-      jumpForce: -10.5,
+      jumpForce: -11.0,
       grounded: false,
       facing: 'right' as 'left' | 'right',
       invulnerable: 0,
@@ -274,7 +275,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       y: number;
       w: number;
       h: number;
-      type: 'ground' | 'brick' | 'question' | 'pipe' | 'rugpull';
+      type: 'ground' | 'brick' | 'question' | 'pipe' | 'rugpull' | 'hollow_column';
       hit?: boolean;
       shake?: number;
       falling?: boolean;
@@ -282,14 +283,15 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
     }
 
     const platforms: Platform[] = [
-      { x: 0, y: 240, w: 700, h: 40, type: 'ground' },
-      { x: 780, y: 240, w: 600, h: 40, type: 'ground' },
+      { x: 0, y: 240, w: 715, h: 40, type: 'ground' },
+      { x: 775, y: 240, w: 265, h: 40, type: 'ground' },
+      { x: 1095, y: 240, w: 285, h: 40, type: 'ground' },
       { x: 1460, y: 240, w: 700, h: 40, type: 'ground' },
       { x: 2240, y: 240, w: 1100, h: 40, type: 'ground' },
 
       { x: 260, y: 205, w: 35, h: 35, type: 'pipe' },
       { x: 540, y: 190, w: 35, h: 50, type: 'pipe' },
-      { x: 1050, y: 195, w: 35, h: 45, type: 'pipe' },
+      { x: 1050, y: 195, w: 35, h: 45, type: 'hollow_column' },
       { x: 1780, y: 195, w: 35, h: 45, type: 'pipe' },
 
       { x: 160, y: 165, w: 25, h: 25, type: 'question' },
@@ -327,8 +329,8 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
     }
 
     const trollBlocks: TrollBlock[] = [
-      { x: 742, y: 145, w: 26, h: 26, revealed: false, label: '😈', reason: 'Bonked head on an invisible block and fell into the abyss! 😈' },
-      { x: 2160, y: 155, w: 26, h: 26, revealed: false, label: '📉', reason: 'Blocked by an invisible wall right before the goal! 📉' },
+      { x: 735, y: 170, w: 20, h: 20, revealed: false, label: '😈', reason: 'Bonked head on an invisible block and fell into the abyss! 😈' },
+      { x: 2160, y: 170, w: 20, h: 20, revealed: false, label: '📉', reason: 'Blocked by an invisible wall right before the goal! 📉' },
     ];
 
     interface Coin {
@@ -367,12 +369,12 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
     }
 
     const enemies: Enemy[] = [
-      { x: 420, y: 220, w: 20, h: 20, vx: -1.2, alive: true, rangeStart: 320, rangeEnd: 520 },
-      { x: 920, y: 220, w: 20, h: 20, vx: -1.2, alive: true, rangeStart: 800, rangeEnd: 1030 },
-      { x: 1200, y: 220, w: 20, h: 20, vx: 1.2, alive: true, rangeStart: 1120, rangeEnd: 1360 },
-      { x: 1650, y: 220, w: 20, h: 20, vx: -1.4, alive: true, rangeStart: 1500, rangeEnd: 1760 },
-      { x: 2000, y: 220, w: 20, h: 20, vx: -1.5, alive: true, rangeStart: 1850, rangeEnd: 2150 },
-      { x: 2450, y: 220, w: 20, h: 20, vx: 1.2, alive: true, rangeStart: 2300, rangeEnd: 2550 },
+      { x: 420, y: 220, w: 20, h: 20, vx: -0.9, alive: true, rangeStart: 320, rangeEnd: 520 },
+      { x: 920, y: 220, w: 20, h: 20, vx: -0.9, alive: true, rangeStart: 800, rangeEnd: 1030 },
+      { x: 1200, y: 220, w: 20, h: 20, vx: 0.9, alive: true, rangeStart: 1120, rangeEnd: 1360 },
+      { x: 1650, y: 220, w: 20, h: 20, vx: -1.0, alive: true, rangeStart: 1500, rangeEnd: 1760 },
+      { x: 2000, y: 220, w: 20, h: 20, vx: -1.0, alive: true, rangeStart: 1850, rangeEnd: 2150 },
+      { x: 2450, y: 220, w: 20, h: 20, vx: 0.9, alive: true, rangeStart: 2300, rangeEnd: 2550 },
     ];
 
     const flag = {
@@ -441,7 +443,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
         player.vx = 0;
         player.vy = 0;
         player.grounded = false;
-        player.invulnerable = 90;
+        player.invulnerable = 120;
       }
     };
 
@@ -487,18 +489,18 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       }
 
       for (const p of platforms) {
-        if (p.type === 'rugpull') {
+        if (p.type === 'rugpull' || p.type === 'hollow_column') {
           if (p.shake && p.shake > 0) {
             p.shake--;
             if (p.shake === 0) {
               p.falling = true;
               p.fallSpeed = 2;
               audio.bonk();
-              spawnFloatingText(p.x + 10, p.y - 15, 'RUG PULL! 📉', '#EF4444');
+              spawnFloatingText(p.x + (p.type === 'hollow_column' ? -5 : 10), p.y - 15, p.type === 'hollow_column' ? 'HOLLOW! 🕳️' : 'RUG PULL! 📉', '#EF4444');
               spawnParticles(p.x + p.w / 2, p.y + p.h / 2, '#EF4444', 10);
             }
           } else if (p.falling) {
-            p.fallSpeed = (p.fallSpeed || 2) + 0.5;
+            p.fallSpeed = (p.fallSpeed || 2) + 0.6;
             p.y += p.fallSpeed;
           }
         }
@@ -520,7 +522,12 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
             player.grounded = true;
 
             if (p.type === 'rugpull' && !p.falling && !p.shake) {
+              p.shake = 22;
+            }
+            if (p.type === 'hollow_column' && !p.falling && !p.shake) {
               p.shake = 16;
+              stateRef.current.deathReason = 'Fell through a hollow trap column into the abyss! 🕳️';
+              setDeathReason('Fell through a hollow trap column into the abyss! 🕳️');
             }
             if (p.type === 'question' && !p.hit) {
               p.hit = true;
@@ -709,13 +716,14 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
           ctx.font = 'bold 10px monospace';
           ctx.textAlign = 'center';
           ctx.fillText(p.falling ? 'RUG!' : p.shake ? 'RUN!' : 'SAFE', p.x + p.w / 2 + jitterX, p.y + p.h / 2 + 3);
-        } else if (p.type === 'pipe') {
-          ctx.fillStyle = '#059669';
-          ctx.fillRect(p.x, p.y, p.w, p.h);
-          ctx.fillStyle = '#10B981';
-          ctx.fillRect(p.x - 3, p.y, p.w + 6, 10);
+        } else if (p.type === 'pipe' || p.type === 'hollow_column') {
+          const jitterX = p.shake ? (Math.random() - 0.5) * 4 : 0;
+          ctx.fillStyle = p.falling ? '#047857' : '#059669';
+          ctx.fillRect(p.x + jitterX, p.y, p.w, p.h);
+          ctx.fillStyle = p.falling ? '#065F46' : '#10B981';
+          ctx.fillRect(p.x - 3 + jitterX, p.y, p.w + 6, 10);
           ctx.strokeStyle = '#064E3B';
-          ctx.strokeRect(p.x - 3, p.y, p.w + 6, 10);
+          ctx.strokeRect(p.x - 3 + jitterX, p.y, p.w + 6, 10);
         } else if (p.type === 'question') {
           ctx.fillStyle = p.hit ? '#4B5563' : '#F59E0B';
           ctx.fillRect(p.x, p.y, p.w, p.h);
@@ -1021,7 +1029,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
 
       <div className="flex items-center justify-between px-1 mb-2 text-xs">
         <div className="flex items-center gap-1">
-          {Array.from({ length: 3 }).map((_, i) => (
+          {Array.from({ length: 5 }).map((_, i) => (
             <Heart
               key={i}
               className={`w-4 h-4 ${i < lives ? 'text-red-500 fill-red-500' : 'text-gray-700'}`}

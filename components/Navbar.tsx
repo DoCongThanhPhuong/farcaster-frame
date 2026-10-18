@@ -90,7 +90,7 @@ export function Navbar({ user, isInMiniApp }: NavbarProps) {
                   AIRDROP
                 </span>
               </div>
-              <p className="text-[11px] text-gray-400">Mini App v2 • Base L2</p>
+              <p className="text-[11px] text-gray-400">Mini App • Base L2</p>
             </div>
           </div>
 
