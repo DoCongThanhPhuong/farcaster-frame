@@ -25,7 +25,6 @@ export function DailyStreakCard({ streakDays, onCheckIn, fid }: DailyStreakCardP
         const diffMs = now - lastTime;
         const cooldown = 24 * 60 * 60 * 1000; // 24 hours
 
-        // If missed check-in by more than 48 hours, streak resets
         if (diffMs > 48 * 60 * 60 * 1000 && streakDays > 0) {
           onCheckIn(0);
           localStorage.setItem(streakKey, '0');
@@ -59,7 +58,6 @@ export function DailyStreakCard({ streakDays, onCheckIn, fid }: DailyStreakCardP
     } catch {
       nextStreak = streakDays + 1;
     }
-    // Trigger haptics if on mobile Warpcast
     try {
       if ('haptics' in sdk && sdk.haptics && typeof sdk.haptics === 'object' && 'notificationOccurred' in sdk.haptics && typeof sdk.haptics.notificationOccurred === 'function') {
         sdk.haptics.notificationOccurred('success');
@@ -91,7 +89,6 @@ export function DailyStreakCard({ streakDays, onCheckIn, fid }: DailyStreakCardP
         </div>
       </div>
 
-      {/* 7-Day Visual Tracker */}
       <div className="grid grid-cols-7 gap-1.5 mb-5">
         {days.map((day) => {
           const isDone = day <= streakDays;
@@ -118,7 +115,6 @@ export function DailyStreakCard({ streakDays, onCheckIn, fid }: DailyStreakCardP
         })}
       </div>
 
-      {/* Claim Action Button */}
       <button
         onClick={handleClaim}
         disabled={!canClaim}

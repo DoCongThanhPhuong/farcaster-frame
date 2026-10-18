@@ -14,9 +14,10 @@ export function ShareCastCard({ fid, streakDays }: ShareCastCardProps) {
 
   const handleShareCast = async () => {
     const text = `Just checked my Builder Airdrop score on @farcaster! 🚀\n🔥 Current streak: ${streakDays} days\nCheck your allocation & claim your daily streak:`;
-    const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://farcaster-frame.vercel.app';
+    const appUrl = typeof window !== 'undefined'
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_HOST ? `https://${process.env.NEXT_PUBLIC_HOST}` : 'https://farcaster-frame-sepia.vercel.app');
 
-    // 1. Try Warpcast Mini App native cast composer
     try {
       if (typeof sdk.actions.composeCast === 'function') {
         await sdk.actions.composeCast({
@@ -29,7 +30,6 @@ export function ShareCastCard({ fid, streakDays }: ShareCastCardProps) {
       console.warn('Native cast compose failed, falling back to URL:', err);
     }
 
-    // 2. Fallback to Warpcast compose URL
     const composeUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(appUrl)}`;
     try {
       if (typeof sdk.actions.openUrl === 'function') {

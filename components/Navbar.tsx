@@ -42,7 +42,6 @@ export function Navbar({ user, isInMiniApp }: NavbarProps) {
 
     setConnectError(null);
 
-    // If inside Farcaster Mini App, connect directly to Farcaster wallet
     if (isInMiniApp) {
       const fcConnector = connectors.find((c) => c.name.toLowerCase().includes('farcaster'));
       if (fcConnector) {
@@ -56,7 +55,6 @@ export function Navbar({ user, isInMiniApp }: NavbarProps) {
       }
     }
 
-    // In browser, open wallet selection modal
     setShowWalletModal(true);
   };
 
@@ -68,9 +66,9 @@ export function Navbar({ user, isInMiniApp }: NavbarProps) {
         onSuccess: () => setShowWalletModal(false),
         onError: (err) => {
           if (err.message.includes('not found') || err.message.includes('Connector not found')) {
-            setConnectError('Không tìm thấy tiện ích ví (MetaMask / Brave). Vui lòng cài đặt extension hoặc mở trong Warpcast.');
+            setConnectError('Browser wallet extension (MetaMask / Brave) not detected. Please install an extension or open inside Warpcast.');
           } else {
-            setConnectError(err.message || 'Kết nối thất bại.');
+            setConnectError(err.message || 'Connection failed.');
           }
         },
       }
@@ -138,14 +136,13 @@ export function Navbar({ user, isInMiniApp }: NavbarProps) {
         </div>
       </header>
 
-      {/* Wallet Selection Modal */}
       {showWalletModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#141522] border border-gray-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl relative">
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-800">
               <h3 className="font-bold text-white text-sm flex items-center gap-2">
                 <Wallet className="w-4 h-4 text-purple-400" />
-                Chọn ví kết nối
+                Select Wallet
               </h3>
               <button
                 onClick={() => setShowWalletModal(false)}
@@ -181,7 +178,7 @@ export function Navbar({ user, isInMiniApp }: NavbarProps) {
                           {isFc ? 'Farcaster Wallet' : 'MetaMask / Browser Wallet'}
                         </div>
                         <div className="text-[10px] text-gray-400">
-                          {isFc ? 'Dành cho app Warpcast' : 'Brave, MetaMask, Coinbase'}
+                          {isFc ? 'Recommended for Warpcast' : 'Brave, MetaMask, Coinbase'}
                         </div>
                       </div>
                     </div>
@@ -192,7 +189,7 @@ export function Navbar({ user, isInMiniApp }: NavbarProps) {
             </div>
 
             <p className="text-[11px] text-gray-500 mt-4 text-center">
-              Chưa có ví? Cài đặt extension MetaMask hoặc mở trực tiếp trên app Warpcast.
+              No wallet detected? Install MetaMask extension or open directly inside the Warpcast mobile app.
             </p>
           </div>
         </div>

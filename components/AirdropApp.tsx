@@ -30,7 +30,6 @@ export function AirdropApp() {
   const activeFid = customFid || user?.fid || null;
 
   useEffect(() => {
-    // 1. Restore local data
     try {
       const streakKey = activeFid ? `fc_streak_${activeFid}` : 'fc_airdrop_streak';
       const passKey = activeFid ? `fc_pass_${activeFid}` : 'fc_airdrop_has_minted_pass';
@@ -47,14 +46,12 @@ export function AirdropApp() {
   }, [activeFid]);
 
   useEffect(() => {
-    // 2. Initialize Farcaster Mini App SDK
     const initSdk = async () => {
       try {
         const context = await sdk.context;
         const inMiniApp = Boolean(context?.client);
         setIsInMiniApp(inMiniApp);
 
-        // Tell Warpcast the Mini App has loaded and can hide the splash screen
         if (typeof sdk.actions.ready === 'function') {
           await sdk.actions.ready();
         }
@@ -93,10 +90,9 @@ export function AirdropApp() {
       <Navbar user={user} isInMiniApp={isInMiniApp} />
 
       <main className="flex-1 max-w-2xl w-full mx-auto p-4 space-y-4">
-        {/* Banner notification if preview mode */}
         {!isInMiniApp && (
           <div className="bg-purple-950/40 border border-purple-800/40 rounded-xl p-3 text-xs text-purple-200 flex items-center justify-between">
-            <span>✨ Đang xem ở chế độ Web Browser. Khi mở trên Warpcast, ứng dụng tự động nhận diện FID và ví in-app.</span>
+            <span>✨ Viewing in Web Browser mode. When opened in Warpcast, your FID and wallet are auto-detected.</span>
           </div>
         )}
 
@@ -113,7 +109,6 @@ export function AirdropApp() {
           isInMiniApp={isInMiniApp}
         />
 
-        {/* Tab Switcher */}
         <div className="flex rounded-xl bg-gray-900/90 p-1 border border-gray-800 shadow-md">
           <button
             onClick={() => setActiveTab('airdrop')}
@@ -123,7 +118,7 @@ export function AirdropApp() {
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            <span>🪂 Nhiệm Vụ Airdrop</span>
+            <span>🪂 Airdrop Tasks</span>
           </button>
           <button
             onClick={() => setActiveTab('game')}
@@ -133,7 +128,7 @@ export function AirdropApp() {
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            <span>🎮 Base Mario Arcade</span>
+            <span>🎮 FarBase Rush</span>
             <span className="px-1.5 py-0.5 rounded-full bg-yellow-400/20 text-yellow-300 text-[10px] font-extrabold">
               {gameHighScore > 0 ? `${gameHighScore} pts` : 'HOT'}
             </span>

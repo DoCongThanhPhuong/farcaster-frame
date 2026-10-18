@@ -32,7 +32,6 @@ export function OnchainMintCard({ hasMintedPass, onPassMinted, fid }: OnchainMin
       onPassMinted();
     }
   }, [isTxSuccess]);
-  // 1. Onchain Transaction (Mint pass on Base)
   const handleOnchainMint = async () => {
     if (!isConnected || !address) {
       setError('Please connect your wallet first.');
@@ -56,8 +55,6 @@ export function OnchainMintCard({ hasMintedPass, onPassMinted, fid }: OnchainMin
         }
       }
 
-      // 0 ETH commemorative mint to burn address with custom Farcaster calldata
-      // "0x6661726361737465725f6275696c646572" = "farcaster_builder"
       const hash = await sendTransactionAsync({
         to: '0x000000000000000000000000000000000000dEaD',
         value: parseEther('0'),
@@ -66,7 +63,6 @@ export function OnchainMintCard({ hasMintedPass, onPassMinted, fid }: OnchainMin
 
       setTxHash(hash);
     } catch (err: unknown) {
-      console.error('Mint error:', err);
       const message = err && typeof err === 'object' && 'shortMessage' in err && typeof err.shortMessage === 'string'
         ? err.shortMessage
         : err instanceof Error
@@ -77,7 +73,6 @@ export function OnchainMintCard({ hasMintedPass, onPassMinted, fid }: OnchainMin
     }
   };
 
-  // 2. Gasless cryptographic signature
   const handleSignVerification = async () => {
     if (!isConnected || !address) {
       setError('Please connect your wallet first.');
@@ -89,10 +84,18 @@ export function OnchainMintCard({ hasMintedPass, onPassMinted, fid }: OnchainMin
     try {
       const message = `Farcaster Builder Airdrop Verification\nFID: #${fid || 1}\nAddress: ${address}\nTimestamp: ${Date.now()}`;
       const sig = await signMessageAsync({ message });
+      const res = await fetch('/api/verify-signature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, message, signature: sig }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.verified) {
+        throw new Error(data.error || 'Server signature verification failed');
+      }
       setSignedMsg(sig);
       onPassMinted();
     } catch (err: unknown) {
-      console.error('Sign error:', err);
       const message = err && typeof err === 'object' && 'shortMessage' in err && typeof err.shortMessage === 'string'
         ? err.shortMessage
         : err instanceof Error

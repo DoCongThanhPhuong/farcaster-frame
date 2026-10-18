@@ -30,14 +30,12 @@ export function AirdropEligibilityCard({
   const hasFid = fid !== null && fid > 0;
   const currentFid = hasFid ? fid : null;
 
-  // Seniority points
   let fidPoints = hasFid ? 1200 : 0;
   if (hasFid && currentFid) {
     if (currentFid < 10000) fidPoints = 8500;
     else if (currentFid < 50000) fidPoints = 4800;
     else if (currentFid < 200000) fidPoints = 2600;
   }
-  // Multipliers
   let multiplier = 1.0;
   if (isWalletConnected) multiplier += 0.3;
   if (streakDays > 0) multiplier += streakDays * 0.15;
@@ -58,10 +56,6 @@ export function AirdropEligibilityCard({
 
   return (
     <div className="bg-[#141522] border border-gray-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-      {/* Background ambient glow */}
-      <div className="absolute -top-16 -right-16 w-36 h-36 bg-purple-600/10 rounded-full blur-2xl pointer-events-none" />
-
-      {/* User Header */}
       <div className="flex items-center justify-between gap-3 mb-5 pb-4 border-b border-gray-800/80">
         <div className="flex items-center gap-3">
           {pfpUrl ? (
@@ -110,7 +104,6 @@ export function AirdropEligibilityCard({
         )}
       </div>
 
-      {/* Main Score Display */}
       <div className="bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-blue-950/40 border border-purple-800/30 rounded-xl p-4 mb-4">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
@@ -133,7 +126,6 @@ export function AirdropEligibilityCard({
           </div>
         </div>
 
-        {/* Progress to next tier */}
         <div className="w-full bg-gray-800/80 rounded-full h-1.5 mt-3 overflow-hidden">
           <div
             className="bg-gradient-to-r from-purple-500 to-blue-500 h-1.5 rounded-full transition-all duration-500"
@@ -141,8 +133,6 @@ export function AirdropEligibilityCard({
           />
         </div>
       </div>
-
-      {/* Multipliers & Tasks Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
         <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-2.5">
           <div className="text-xs text-gray-400 mb-1 flex items-center justify-center gap-1">
@@ -183,7 +173,7 @@ export function AirdropEligibilityCard({
           <div className={`text-sm font-bold ${gameHighScore && gameHighScore >= 100 ? 'text-yellow-400' : 'text-gray-400'}`}>
             {gameHighScore && gameHighScore >= 100 ? '+0.2x Active' : `${gameHighScore || 0}/100`}
           </div>
-          <div className="text-[10px] text-gray-500">Base Mario</div>
+          <div className="text-[10px] text-gray-500">FarBase Rush</div>
         </div>
       </div>
     </div>
