@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import sdk from '@farcaster/frame-sdk';
-import { Play, RotateCcw, Share2, Trophy, Volume2, VolumeX, ArrowLeft, ArrowRight, ArrowUp, Sparkles, Heart } from 'lucide-react';
+import { Play, RotateCcw, Share2, Trophy, Volume2, VolumeX, ArrowLeft, ArrowRight, ArrowUp, Sparkles, Heart, Skull } from 'lucide-react';
 
 interface BaseMarioGameProps {
   fid: number | null;
@@ -79,6 +79,25 @@ class RetroAudio {
     } catch {}
   }
 
+  bonk() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(450, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(70, this.ctx.currentTime + 0.22);
+      gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.22);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.22);
+    } catch {}
+  }
+
   powerUp() {
     if (!this.enabled) return;
     this.init();
@@ -110,12 +129,12 @@ class RetroAudio {
       osc.connect(gain);
       gain.connect(this.ctx.destination);
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(280, this.ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(110, this.ctx.currentTime + 0.4);
-      gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.45);
+      osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(80, this.ctx.currentTime + 0.5);
+      gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
       osc.start();
-      osc.stop(this.ctx.currentTime + 0.45);
+      osc.stop(this.ctx.currentTime + 0.5);
     } catch {}
   }
 }
@@ -139,11 +158,23 @@ interface FloatingText {
   life: number;
 }
 
+const TROLL_DEATH_MESSAGES = [
+  'Bị khối tàng hình cộc đầu rớt vực! 😈',
+  'Bệ đỡ Dev Rug Pull sập ngay dưới chân! 📉',
+  'Tham lam đớp trúng Fake Scam Airdrop! 🤡',
+  'Cột cờ đích chạy trốn trêu ngươi! 🏃💨',
+  'Bị quái FUD Market Cap thanh lý! 🐻',
+  'Gas fee Base tăng đột biến đè bẹp! ⛽',
+  'FOMO nhảy ẩu dính bẫy Syobon! 💀',
+];
+
 export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [gameState, setGameState] = useState<'idle' | 'playing' | 'gameover' | 'victory'>('idle');
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
+  const [deaths, setDeaths] = useState(0);
+  const [deathReason, setDeathReason] = useState('Trượt chân vào Bear Market! 📉');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [lives, setLives] = useState(3);
 
@@ -158,19 +189,30 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
     gameState: 'idle' as 'idle' | 'playing' | 'gameover' | 'victory',
     score: 0,
     highScore: 0,
+    deaths: 0,
+    deathReason: 'Trượt chân vào Bear Market! 📉',
     lives: 3,
   });
 
-  // Load high score
+  // Load high score & deaths
   useEffect(() => {
     const key = fid ? `fc_mario_highscore_${fid}` : 'fc_mario_highscore';
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      const val = parseInt(saved, 10) || 0;
-      setHighScore(val);
-      stateRef.current.highScore = val;
-      onHighScoreChange?.(val);
-    }
+    const deathKey = fid ? `fc_mario_deaths_${fid}` : 'fc_mario_deaths';
+    try {
+      const savedScore = localStorage.getItem(key);
+      if (savedScore) {
+        const val = parseInt(savedScore, 10) || 0;
+        setHighScore(val);
+        stateRef.current.highScore = val;
+        onHighScoreChange?.(val);
+      }
+      const savedDeaths = localStorage.getItem(deathKey);
+      if (savedDeaths) {
+        const dVal = parseInt(savedDeaths, 10) || 0;
+        setDeaths(dVal);
+        stateRef.current.deaths = dVal;
+      }
+    } catch {}
   }, [fid, onHighScoreChange]);
 
   const toggleSound = () => {
@@ -197,7 +239,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
     const CANVAS_WIDTH = 480;
     const CANVAS_HEIGHT = 280;
     const GRAVITY = 0.55;
-    const LEVEL_WIDTH = 3200;
+    const LEVEL_WIDTH = 3400;
 
     // Player
     const player = {
@@ -215,14 +257,17 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       animTick: 0,
     };
 
-    // Platforms: [x, y, w, h, type: 'ground' | 'brick' | 'question' | 'pipe']
+    // Platforms: include troll rugpull platforms
     interface Platform {
       x: number;
       y: number;
       w: number;
       h: number;
-      type: 'ground' | 'brick' | 'question' | 'pipe';
+      type: 'ground' | 'brick' | 'question' | 'pipe' | 'rugpull';
       hit?: boolean;
+      shake?: number;
+      falling?: boolean;
+      fallSpeed?: number;
     }
 
     const platforms: Platform[] = [
@@ -230,7 +275,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       { x: 0, y: 240, w: 700, h: 40, type: 'ground' },
       { x: 780, y: 240, w: 600, h: 40, type: 'ground' },
       { x: 1460, y: 240, w: 700, h: 40, type: 'ground' },
-      { x: 2240, y: 240, w: 960, h: 40, type: 'ground' },
+      { x: 2240, y: 240, w: 1100, h: 40, type: 'ground' },
 
       // Pipes
       { x: 260, y: 205, w: 35, h: 35, type: 'pipe' },
@@ -248,11 +293,12 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       { x: 380, y: 145, w: 75, h: 20, type: 'brick' },
       { x: 420, y: 95, w: 25, h: 25, type: 'question' },
 
-      // Section 3
+      // Section 3 (Contains Rugpull Platform Trap)
       { x: 880, y: 165, w: 25, h: 25, type: 'question' },
       { x: 930, y: 165, w: 60, h: 20, type: 'brick' },
       { x: 1180, y: 155, w: 25, h: 25, type: 'question' },
-      { x: 1240, y: 130, w: 75, h: 20, type: 'brick' },
+      // TROLL TRAP 1: Rug Pull Platform (collapses when stepped on!)
+      { x: 1240, y: 130, w: 75, h: 20, type: 'rugpull' },
 
       // Section 4
       { x: 1560, y: 165, w: 25, h: 25, type: 'brick' },
@@ -267,11 +313,29 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       { x: 2690, y: 160, w: 30, h: 80, type: 'brick' },
     ];
 
-    // Collectibles: Coins (Base & Farcaster)
+    // TROLL TRAP 2: Invisible Blocks (Cat Mario style!)
+    interface TrollBlock {
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      revealed: boolean;
+      label: string;
+      reason: string;
+    }
+
+    const trollBlocks: TrollBlock[] = [
+      // Trap right in the middle of jumping over pit 1 (700 -> 780)
+      { x: 742, y: 145, w: 26, h: 26, revealed: false, label: '😈', reason: 'Bị khối tàng hình cộc đầu rớt vực! 😈' },
+      // Trap right before the stairs gap
+      { x: 2160, y: 155, w: 26, h: 26, revealed: false, label: '📉', reason: 'Dính khối tàng hình chặn đường trước đích! 📉' },
+    ];
+
+    // Collectibles: Coins (Base, Farcaster, and Troll Fake Scam Airdrop)
     interface Coin {
       x: number;
       y: number;
-      type: 'base' | 'farcaster';
+      type: 'base' | 'farcaster' | 'fake_airdrop';
       collected: boolean;
       tick: number;
     }
@@ -283,7 +347,8 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       { x: 432, y: 65, type: 'farcaster', collected: false, tick: 3 },
       { x: 640, y: 200, type: 'base', collected: false, tick: 4 },
       { x: 892, y: 135, type: 'farcaster', collected: false, tick: 5 },
-      { x: 955, y: 135, type: 'base', collected: false, tick: 6 },
+      // TROLL TRAP 3: Fake Scam Airdrop Coin!
+      { x: 955, y: 135, type: 'fake_airdrop', collected: false, tick: 6 },
       { x: 1192, y: 125, type: 'base', collected: false, tick: 7 },
       { x: 1270, y: 100, type: 'farcaster', collected: false, tick: 8 },
       { x: 1597, y: 135, type: 'farcaster', collected: false, tick: 9 },
@@ -313,13 +378,14 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       { x: 2450, y: 220, w: 20, h: 20, vx: 1.2, alive: true, rangeStart: 2300, rangeEnd: 2550 },
     ];
 
-    // Goal Flag Pole
+    // TROLL TRAP 4: Goal Flag that flees when you approach it!
     const flag = {
       x: 2850,
       y: 90,
       w: 8,
       h: 150,
       reached: false,
+      trolled: false,
     };
 
     const particles: Particle[] = [];
@@ -346,6 +412,34 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
 
     let animationFrameId: number;
     let cameraX = 0;
+
+    const recordDeath = (reason?: string) => {
+      stateRef.current.lives--;
+      setLives(stateRef.current.lives);
+      stateRef.current.deaths++;
+      setDeaths(stateRef.current.deaths);
+
+      const chosenReason = reason || TROLL_DEATH_MESSAGES[Math.floor(Math.random() * TROLL_DEATH_MESSAGES.length)];
+      stateRef.current.deathReason = chosenReason;
+      setDeathReason(chosenReason);
+
+      const deathKey = fid ? `fc_mario_deaths_${fid}` : 'fc_mario_deaths';
+      try {
+        localStorage.setItem(deathKey, stateRef.current.deaths.toString());
+      } catch {}
+
+      if (stateRef.current.lives <= 0) {
+        audio.gameOver();
+        endGame('gameover');
+      } else {
+        audio.bonk();
+        // Respawn at safe spot
+        player.x = Math.max(60, player.x - 220);
+        player.y = 120;
+        player.vy = 0;
+        player.invulnerable = 60;
+      }
+    };
 
     const gameLoop = () => {
       if (stateRef.current.gameState !== 'playing') return;
@@ -392,6 +486,25 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
         }
       }
 
+      // TROLL TRAP 1 Check: Rug Pull Falling Platforms
+      for (const p of platforms) {
+        if (p.type === 'rugpull') {
+          if (p.shake && p.shake > 0) {
+            p.shake--;
+            if (p.shake === 0) {
+              p.falling = true;
+              p.fallSpeed = 2;
+              audio.bonk();
+              spawnFloatingText(p.x + 10, p.y - 15, 'RUG PULL! 📉', '#EF4444');
+              spawnParticles(p.x + p.w / 2, p.y + p.h / 2, '#EF4444', 10);
+            }
+          } else if (p.falling) {
+            p.fallSpeed = (p.fallSpeed || 2) + 0.5;
+            p.y += p.fallSpeed;
+          }
+        }
+      }
+
       // Move Y & Check Platform Collision
       player.grounded = false;
       player.y += player.vy;
@@ -408,6 +521,11 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
             player.y = p.y - player.height;
             player.vy = 0;
             player.grounded = true;
+
+            // Trigger Rug Pull Trap!
+            if (p.type === 'rugpull' && !p.falling && !p.shake) {
+              p.shake = 16;
+            }
           }
           // Hitting platform from below (Mario question/brick bump)
           else if (player.vy < 0 && player.y - player.vy >= p.y + p.h - 6) {
@@ -429,24 +547,36 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
         }
       }
 
-      // Bottom pit death
-      if (player.y > CANVAS_HEIGHT + 30) {
-        stateRef.current.lives--;
-        setLives(stateRef.current.lives);
-        if (stateRef.current.lives <= 0) {
-          audio.gameOver();
-          endGame('gameover');
-          return;
-        } else {
-          // Respawn at safe spot
-          player.x = Math.max(60, player.x - 200);
-          player.y = 120;
-          player.vy = 0;
-          player.invulnerable = 60;
+      // TROLL TRAP 2: Invisible Blocks Check (Bonk & drop down!)
+      for (const tb of trollBlocks) {
+        if (
+          player.x < tb.x + tb.w &&
+          player.x + player.width > tb.x &&
+          player.y < tb.y + tb.h &&
+          player.y + player.height > tb.y
+        ) {
+          if (!tb.revealed) {
+            tb.revealed = true;
+            audio.bonk();
+            spawnFloatingText(tb.x, tb.y - 15, 'RUG PULL! 😈', '#EF4444');
+            spawnParticles(tb.x + tb.w / 2, tb.y + tb.h / 2, '#EF4444', 12);
+            stateRef.current.deathReason = tb.reason;
+            setDeathReason(tb.reason);
+          }
+          // Dead stop horizontally and shove downward!
+          player.y = tb.y + tb.h;
+          player.vy = 5;
+          player.vx = 0;
         }
       }
 
-      // 2. Collect Coins
+      // Bottom pit death
+      if (player.y > CANVAS_HEIGHT + 30) {
+        recordDeath();
+        return;
+      }
+
+      // 2. Collect Coins & Troll Fake Airdrop
       for (const coin of coins) {
         if (!coin.collected) {
           coin.tick++;
@@ -457,12 +587,26 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
             player.y + player.height > coin.y - 8
           ) {
             coin.collected = true;
-            audio.coin();
-            const gain = coin.type === 'farcaster' ? 50 : 20;
-            stateRef.current.score += gain;
-            setScore(stateRef.current.score);
-            spawnFloatingText(coin.x, coin.y - 10, `+${gain}`, coin.type === 'farcaster' ? '#C084FC' : '#60A5FA');
-            spawnParticles(coin.x, coin.y, coin.type === 'farcaster' ? '#9333EA' : '#0052FF', 8);
+
+            if (coin.type === 'fake_airdrop') {
+              // TROLL TRAP 3: Fake Scam Airdrop!
+              audio.bonk();
+              stateRef.current.score = Math.max(0, stateRef.current.score - 50);
+              setScore(stateRef.current.score);
+              spawnFloatingText(coin.x, coin.y - 15, 'SCAM AIRDROP! 🤡 -50', '#EF4444');
+              spawnParticles(coin.x, coin.y, '#EF4444', 15);
+              player.vx = player.facing === 'right' ? -8 : 8;
+              player.vy = -6;
+              stateRef.current.deathReason = 'Tham lam đớp trúng Fake Scam Airdrop! 🤡';
+              setDeathReason('Tham lam đớp trúng Fake Scam Airdrop! 🤡');
+            } else {
+              audio.coin();
+              const gain = coin.type === 'farcaster' ? 50 : 20;
+              stateRef.current.score += gain;
+              setScore(stateRef.current.score);
+              spawnFloatingText(coin.x, coin.y - 10, `+${gain}`, coin.type === 'farcaster' ? '#C084FC' : '#60A5FA');
+              spawnParticles(coin.x, coin.y, coin.type === 'farcaster' ? '#9333EA' : '#0052FF', 8);
+            }
           }
         }
       }
@@ -493,30 +637,31 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
               spawnParticles(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#EF4444', 12);
             } else if (player.invulnerable <= 0) {
               // Side hit: lose life
-              stateRef.current.lives--;
-              setLives(stateRef.current.lives);
-              audio.stomp();
-              if (stateRef.current.lives <= 0) {
-                audio.gameOver();
-                endGame('gameover');
-                return;
-              } else {
+              recordDeath('Bị quái FUD Market Cap thanh lý! 🐻');
+              if (stateRef.current.lives > 0) {
                 player.invulnerable = 60;
                 player.vy = -5;
                 player.vx = player.facing === 'right' ? -4 : 4;
               }
+              return;
             }
           }
         }
       }
 
-      // 4. Flag Goal Reached
-      if (player.x + player.width >= flag.x && !flag.reached) {
+      // TROLL TRAP 4: Flag Goal Reached or Flees!
+      if (player.x + player.width >= 2810 && !flag.trolled) {
+        flag.trolled = true;
+        flag.x = 3120; // Flag teleports further away!
+        audio.bonk();
+        spawnFloatingText(2850, 110, 'NOT YET! DYOR! 🏃💨', '#FBBF24');
+        spawnParticles(2850, 120, '#FBBF24', 15);
+      } else if (player.x + player.width >= flag.x && !flag.reached) {
         flag.reached = true;
         audio.powerUp();
         stateRef.current.score += 500;
         setScore(stateRef.current.score);
-        spawnFloatingText(flag.x, flag.y, '+500 GOAL! 🏆', '#FBBF24');
+        spawnFloatingText(flag.x, flag.y, '+500 REAL GOAL! 🏆', '#FBBF24');
         setTimeout(() => {
           endGame('victory');
         }, 800);
@@ -562,6 +707,17 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
           // Grid lines
           ctx.strokeStyle = '#1e293b';
           ctx.strokeRect(p.x, p.y, p.w, p.h);
+        } else if (p.type === 'rugpull') {
+          // Rugpull troll platform
+          const jitterX = p.shake ? (Math.random() - 0.5) * 6 : 0;
+          ctx.fillStyle = p.falling ? '#EF4444' : p.shake ? '#DC2626' : '#855DCD';
+          ctx.fillRect(p.x + jitterX, p.y, p.w, p.h);
+          ctx.strokeStyle = p.shake ? '#B91C1C' : '#4C1D95';
+          ctx.strokeRect(p.x + jitterX, p.y, p.w, p.h);
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = 'bold 10px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(p.falling ? 'RUG!' : p.shake ? 'RUN!' : 'SAFE', p.x + p.w / 2 + jitterX, p.y + p.h / 2 + 3);
         } else if (p.type === 'pipe') {
           // Retro Tech Pipe
           ctx.fillStyle = '#059669';
@@ -592,13 +748,44 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
         }
       }
 
-      // Draw Coins
+      // Draw Revealed Troll Blocks
+      for (const tb of trollBlocks) {
+        if (tb.revealed && tb.x > cameraX - 20 && tb.x < cameraX + CANVAS_WIDTH + 20) {
+          ctx.fillStyle = '#991B1B';
+          ctx.fillRect(tb.x, tb.y, tb.w, tb.h);
+          ctx.strokeStyle = '#EF4444';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(tb.x, tb.y, tb.w, tb.h);
+          ctx.lineWidth = 1;
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(tb.label, tb.x + tb.w / 2, tb.y + tb.h / 2 + 4);
+        }
+      }
+
+      // Draw Coins & Fake Scam Airdrop
       for (const coin of coins) {
         if (!coin.collected && coin.x > cameraX - 20 && coin.x < cameraX + CANVAS_WIDTH + 20) {
           const bounce = Math.sin(coin.tick * 0.1) * 3;
           ctx.save();
           ctx.translate(coin.x, coin.y + bounce);
-          if (coin.type === 'farcaster') {
+
+          if (coin.type === 'fake_airdrop') {
+            // Shiny rainbow scam coin
+            ctx.fillStyle = '#F59E0B';
+            ctx.beginPath();
+            ctx.arc(0, 0, 11, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#EF4444';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.lineWidth = 1;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 8px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('10K$', 0, 3);
+          } else if (coin.type === 'farcaster') {
             // Farcaster Purple Coin
             ctx.fillStyle = '#855DCD';
             ctx.beginPath();
@@ -658,7 +845,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       ctx.fill();
 
       // Flag Cloth
-      ctx.fillStyle = '#0052FF';
+      ctx.fillStyle = flag.trolled ? '#DC2626' : '#0052FF';
       ctx.beginPath();
       ctx.moveTo(flag.x + flag.w, flag.y + 10);
       ctx.lineTo(flag.x + flag.w + 35, flag.y + 25);
@@ -789,9 +976,9 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
     };
   }, []);
 
-  // Share score on Warpcast
+  // Share score on Warpcast with Mess Adventure Troll format
   const handleShareScore = async () => {
-    const castText = `🎮 I just scored ${score} pts in Base Mario Arcade on @farcaster! 🪂🔥\n\nCan you beat my high score? Play and farm your builder airdrop on Base:`;
+    const castText = `💀 Tôi vừa bị troll chết ${deaths} lần trong Base Mario Mess Adventure! 😂\nLý do: "${deathReason}"\n\nThách bạn qua được màn 1 mà không rage quit:`;
     const frameUrl = 'https://farcaster-frame-sepia.vercel.app';
 
     try {
@@ -815,18 +1002,18 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       {/* Header */}
       <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-800/80">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-base shadow-lg">
-            🎮
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-red-600 to-purple-600 flex items-center justify-center text-base shadow-lg animate-pulse">
+            😈
           </div>
           <div>
             <h3 className="font-bold text-white text-sm flex items-center gap-1.5">
-              <span>Base Mario: Farcaster Jump</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-semibold border border-blue-500/30">
-                L2 Canvas
+              <span>Base Mario: Mess Adventure</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 font-semibold border border-red-500/30">
+                Troll Edition
               </span>
             </h3>
             <p className="text-[11px] text-gray-400">
-              Nhảy vượt chướng ngại vật &amp; đạp quái FUD nhận Airdrop
+              Cảnh báo: Đầy rẫy bẫy ngầm, khối tàng hình và bệ đỡ Rug Pull!
             </p>
           </div>
         </div>
@@ -842,6 +1029,10 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
           <div className="flex items-center gap-1 bg-yellow-950/40 border border-yellow-800/40 px-2.5 py-1 rounded-lg text-xs font-bold text-yellow-400">
             <Trophy className="w-3.5 h-3.5" />
             <span>{highScore}</span>
+          </div>
+          <div className="flex items-center gap-1 bg-red-950/40 border border-red-800/40 px-2 py-1 rounded-lg text-xs font-bold text-red-400" title="Tổng số lần chết">
+            <Skull className="w-3.5 h-3.5" />
+            <span>{deaths}</span>
           </div>
         </div>
       </div>
@@ -879,31 +1070,34 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
 
         {/* Start / Idle Screen */}
         {gameState === 'idle' && (
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-blue-500 flex items-center justify-center text-2xl shadow-xl mb-3 animate-bounce">
-              🪂
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-600 to-purple-600 flex items-center justify-center text-2xl shadow-xl mb-3 animate-bounce">
+              😈
             </div>
-            <h4 className="font-extrabold text-white text-base mb-1">Super Builder Mario</h4>
-            <p className="text-xs text-gray-300 max-w-xs mb-4">
-              Dùng phím mũi tên hoặc nút cảm ứng để nhảy, ăn Coin 🔵🟣 và đạp quái FUD!
+            <h4 className="font-extrabold text-white text-base mb-1">Base Mario: Mess Adventure</h4>
+            <p className="text-xs text-red-300 max-w-xs mb-4">
+              Game có nhiều bẫy troll ức chế: khối tàng hình, bệ đỡ sập, coin bẫy scam! Đừng tin vào mắt mình!
             </p>
             <button
               onClick={startGame}
-              className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg transition active:scale-95"
+              className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-500 hover:to-purple-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg transition active:scale-95"
             >
               <Play className="w-4 h-4 fill-white" />
-              <span>BẮT ĐẦU CHƠI</span>
+              <span>CHẤP NHẬN THỬ THÁCH</span>
             </button>
           </div>
         )}
 
         {/* Game Over Screen */}
         {gameState === 'gameover' && (
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center animate-fade-in">
-            <span className="text-3xl mb-1">💥</span>
-            <h4 className="font-extrabold text-red-500 text-base mb-1">GAME OVER</h4>
-            <p className="text-xs text-gray-300 mb-3">
-              Điểm đạt được: <strong className="text-yellow-400 font-bold text-sm">{score}</strong>
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center animate-fade-in">
+            <span className="text-4xl mb-1 animate-bounce">💀</span>
+            <h4 className="font-extrabold text-red-500 text-base mb-0.5">BẠN ĐÃ BỊ TROLL!</h4>
+            <p className="text-xs text-yellow-300 font-semibold mb-1 italic">
+              &quot;{deathReason}&quot;
+            </p>
+            <p className="text-[11px] text-gray-400 mb-3">
+              Tổng số lần bay màu: <strong className="text-red-400 font-bold text-xs">{deaths} lần</strong> • Điểm: {score}
             </p>
             <div className="flex gap-2">
               <button
@@ -915,10 +1109,10 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
               </button>
               <button
                 onClick={handleShareScore}
-                className="py-2 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition active:scale-95"
+                className="py-2 px-4 rounded-xl bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-500 hover:to-purple-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition active:scale-95"
               >
                 <Share2 className="w-3.5 h-3.5" />
-                <span>Share Warpcast</span>
+                <span>Khoe cú lừa Warpcast</span>
               </button>
             </div>
           </div>
@@ -928,12 +1122,12 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
         {gameState === 'victory' && (
           <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center animate-fade-in">
             <span className="text-3xl mb-1">🏆</span>
-            <h4 className="font-extrabold text-yellow-400 text-base mb-1">VICTORY! CLEAR LEVEL</h4>
+            <h4 className="font-extrabold text-yellow-400 text-base mb-1">BẬC THẦY VƯỢT TROLL!</h4>
             <p className="text-xs text-gray-300 mb-1">
-              Bạn đã về đích an toàn! Tổng điểm: <strong className="text-yellow-400 font-bold text-sm">{score}</strong>
+              Bạn đã phá đảo mọi cạm bẫy! Tổng điểm: <strong className="text-yellow-400 font-bold text-sm">{score}</strong>
             </p>
             <p className="text-[11px] text-green-400 font-semibold mb-3">
-              Đã mở khóa thưởng Multiplier Airdrop!
+              Đã mở khóa +0.2x Multiplier Airdrop!
             </p>
             <div className="flex gap-2">
               <button
@@ -948,7 +1142,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
                 className="py-2 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition active:scale-95"
               >
                 <Share2 className="w-3.5 h-3.5" />
-                <span>Khoe điểm Feed</span>
+                <span>Khoe kỷ lục Feed</span>
               </button>
             </div>
           </div>
