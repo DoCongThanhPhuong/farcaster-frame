@@ -412,10 +412,19 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
         endGame('gameover');
       } else {
         audio.bonk();
-        player.x = Math.max(60, player.x - 220);
-        player.y = 120;
+        const safeCheckpoints = [60, 320, 600, 850, 1100, 1500, 1800, 2300];
+        let safeX = 60;
+        for (const sx of safeCheckpoints) {
+          if (sx <= player.x) {
+            safeX = sx;
+          }
+        }
+        player.x = safeX;
+        player.y = 150;
+        player.vx = 0;
         player.vy = 0;
-        player.invulnerable = 60;
+        player.grounded = false;
+        player.invulnerable = 90;
       }
     };
 
@@ -538,7 +547,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
 
       if (player.y > CANVAS_HEIGHT + 30) {
         recordDeath();
-        return;
+        if (stateRef.current.gameState !== 'playing') return;
       }
 
       for (const coin of coins) {
@@ -597,12 +606,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
               spawnParticles(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#EF4444', 12);
             } else if (player.invulnerable <= 0) {
               recordDeath('Liquidated by the FUD market cap monster! 🐻');
-              if (stateRef.current.lives > 0) {
-                player.invulnerable = 60;
-                player.vy = -5;
-                player.vx = player.facing === 'right' ? -4 : 4;
-              }
-              return;
+              if (stateRef.current.gameState !== 'playing') return;
             }
           }
         }
@@ -850,7 +854,9 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
 
       ctx.restore();
 
-      animationFrameId = requestAnimationFrame(gameLoop);
+      if (stateRef.current.gameState === 'playing') {
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
     };
 
     const endGame = (outcome: 'gameover' | 'victory') => {
