@@ -42,7 +42,6 @@ export function AirdropEligibilityCard({
   if (hasMintedPass) multiplier += 0.5;
   if (gameHighScore && gameHighScore >= 100) multiplier += 0.2;
   const totalPoints = Math.round(fidPoints * multiplier);
-  const estimatedFarTokens = (totalPoints * 0.42).toFixed(1);
 
   let tier = hasFid ? 'Early Adopter' : 'Explorer';
   let tierColor = 'text-blue-400 border-blue-500/40 bg-blue-950/30';
@@ -108,7 +107,7 @@ export function AirdropEligibilityCard({
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
             <Trophy className="w-3.5 h-3.5 text-yellow-400" />
-            TOTAL AIRDROP SCORE
+            SEASON SCORE
           </span>
           <span className="text-xs font-bold text-purple-300">
             Multiplier: {multiplier.toFixed(2)}x
@@ -119,10 +118,7 @@ export function AirdropEligibilityCard({
             {totalPoints.toLocaleString()} <span className="text-sm font-medium text-purple-300">PTS</span>
           </div>
           <div className="text-right">
-            <div className="text-sm font-bold text-emerald-400">
-              ~{estimatedFarTokens} $BUILD
-            </div>
-            <div className="text-[10px] text-gray-400">Est. Allocation</div>
+            <div className="text-[10px] text-gray-400">In-game points · not a token</div>
           </div>
         </div>
 
@@ -157,10 +153,10 @@ export function AirdropEligibilityCard({
         <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-2.5">
           <div className="text-xs text-gray-400 mb-1 flex items-center justify-center gap-1">
             <ShieldCheck className="w-3 h-3 text-blue-400" />
-            Pass Mint
+            Onchain
           </div>
           <div className={`text-sm font-bold ${hasMintedPass ? 'text-emerald-400' : 'text-gray-400'}`}>
-            {hasMintedPass ? '+0.5x Active' : 'Unminted'}
+            {hasMintedPass ? '+0.5x Active' : 'Not yet'}
           </div>
           <div className="text-[10px] text-gray-500">Base Onchain</div>
         </div>

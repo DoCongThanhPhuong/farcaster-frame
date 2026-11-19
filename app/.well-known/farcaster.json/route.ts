@@ -23,11 +23,11 @@ export async function GET(req: Request) {
     },
     frame: {
       version: '1',
-      name: 'Base & Farcaster Airdrop',
+      name: 'FarBase Rush',
       iconUrl: `${baseUrl}/icon.png`,
       homeUrl: baseUrl,
       imageUrl: `${baseUrl}/opengraph-image`,
-      buttonTitle: 'Check & Claim Airdrop',
+      buttonTitle: 'Play FarBase Rush',
       splashImageUrl: `${baseUrl}/splash.png`,
       splashBackgroundColor: '#0f0e17',
     },

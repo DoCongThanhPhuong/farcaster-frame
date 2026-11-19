@@ -87,7 +87,7 @@ export function Navbar({ user, isInMiniApp }: NavbarProps) {
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-base text-white tracking-tight">FARCAST</span>
                 <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-purple-900/60 text-purple-300 border border-purple-700/50">
-                  AIRDROP
+                  RUSH
                 </span>
               </div>
               <p className="text-[11px] text-gray-400">Mini App • Base L2</p>

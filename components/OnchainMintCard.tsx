@@ -82,7 +82,7 @@ export function OnchainMintCard({ hasMintedPass, onPassMinted, fid }: OnchainMin
     setIsLoading(true);
 
     try {
-      const message = `Farcaster Builder Airdrop Verification\nFID: #${fid || 1}\nAddress: ${address}\nTimestamp: ${Date.now()}`;
+      const message = `FarBase Wallet Verification\nFID: #${fid || 1}\nAddress: ${address}\nTimestamp: ${Date.now()}`;
       const sig = await signMessageAsync({ message });
       const res = await fetch('/api/verify-signature', {
         method: 'POST',
@@ -116,8 +116,8 @@ export function OnchainMintCard({ hasMintedPass, onPassMinted, fid }: OnchainMin
             <Award className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-white text-sm">Onchain Builder Pass</h3>
-            <p className="text-xs text-gray-400">Verified Base L2 contract interaction (+0.5x)</p>
+            <h3 className="font-bold text-white text-sm">Onchain Check-in</h3>
+            <p className="text-xs text-gray-400">Send a 0 ETH transaction on Base (+0.5x)</p>
           </div>
         </div>
 
@@ -135,7 +135,7 @@ export function OnchainMintCard({ hasMintedPass, onPassMinted, fid }: OnchainMin
           <span className="text-white font-medium">Base / Base Sepolia</span>
         </div>
         <div className="flex justify-between text-gray-400">
-          <span>Mint Cost:</span>
+          <span>Cost:</span>
           <span className="text-emerald-400 font-medium">FREE (0 ETH + gas)</span>
         </div>
         <div className="flex justify-between text-gray-400">
@@ -185,7 +185,7 @@ export function OnchainMintCard({ hasMintedPass, onPassMinted, fid }: OnchainMin
           ) : (
             <Sparkles className="w-3.5 h-3.5" />
           )}
-          {hasMintedPass ? 'Pass Minted' : 'Mint on Base'}
+          {hasMintedPass ? 'Checked in' : 'Check in on Base'}
         </button>
 
         <button

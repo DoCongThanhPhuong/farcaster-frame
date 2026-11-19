@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import sdk from '@farcaster/frame-sdk';
-import { Play, RotateCcw, Share2, Trophy, Volume2, VolumeX, ArrowLeft, ArrowRight, ArrowUp, Sparkles, Heart, Skull, HelpCircle, X } from 'lucide-react';
+import { Play, RotateCcw, Share2, Trophy, Volume2, VolumeX, ArrowLeft, ArrowRight, ArrowUp, Sparkles, Heart, Skull, HelpCircle, X, Lock, ChevronRight, CalendarDays } from 'lucide-react';
+import { LEVELS, POINTS, dailyLevel, dailyNumber, type PlatformType } from '@/lib/levels';
 
 interface BaseMarioGameProps {
   fid: number | null;
   onHighScoreChange?: (highScore: number) => void;
+  onDailyRunEnd?: (run: { day: number; score: number }) => void;
 }
 
 class RetroAudio {
@@ -168,7 +170,7 @@ const TROLL_DEATH_MESSAGES = [
   'FOMO reckless jump directly into a Syobon trap! 💀',
 ];
 
-export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
+export function BaseMarioGame({ fid, onHighScoreChange, onDailyRunEnd }: BaseMarioGameProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [gameState, setGameState] = useState<'idle' | 'playing' | 'gameover' | 'victory'>('idle');
   const [score, setScore] = useState(0);
@@ -178,6 +180,11 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [lives, setLives] = useState(5);
   const [showGuide, setShowGuide] = useState(false);
+  const [levelIndex, setLevelIndex] = useState(0);
+  const [unlockedLevel, setUnlockedLevel] = useState(0);
+  // null = campaign level; otherwise the Daily Challenge number being played.
+  const [dailyDay, setDailyDay] = useState<number | null>(null);
+  const [dailyBest, setDailyBest] = useState(0);
 
   const keysRef = useRef<{ left: boolean; right: boolean; jump: boolean }>({
     left: false,
@@ -193,6 +200,10 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
     deathReason: 'Liquidated by market volatility! 📉',
     lives: 5,
   });
+
+  const unlockedKey = fid ? `fc_farbase_unlocked_${fid}` : 'fc_farbase_unlocked';
+  const today = dailyNumber();
+  const runLabel = dailyDay !== null ? `Daily #${dailyDay}` : `Lv ${levelIndex + 1}: ${LEVELS[levelIndex].name}`;
 
   useEffect(() => {
     const key = fid ? `fc_farbase_highscore_${fid}` : 'fc_farbase_highscore';
@@ -228,8 +239,14 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
         setDeaths(dVal);
         stateRef.current.deaths = dVal;
       }
+
+      const savedUnlocked = parseInt(localStorage.getItem(unlockedKey) || '0', 10) || 0;
+      setUnlockedLevel(Math.min(Math.max(savedUnlocked, 0), LEVELS.length - 1));
+
+      const dayKey = fid ? `fc_farbase_daily_${dailyNumber()}_${fid}` : `fc_farbase_daily_${dailyNumber()}`;
+      setDailyBest(parseInt(localStorage.getItem(dayKey) || '0', 10) || 0);
     } catch {}
-  }, [fid, onHighScoreChange]);
+  }, [fid, onHighScoreChange, unlockedKey]);
 
   const toggleSound = () => {
     const next = !soundEnabled;
@@ -237,12 +254,22 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
     audio.enabled = next;
   };
 
-  const startGame = useCallback(() => {
+  // keepScore: advancing to the next level carries the run score over; lives always refill.
+  const startGame = useCallback((levelIdx: number | 'daily', keepScore = false) => {
+    const day = dailyNumber();
+    const level = levelIdx === 'daily' ? dailyLevel(day) : LEVELS[levelIdx];
+    const startScore = keepScore ? stateRef.current.score : 0;
     setGameState('playing');
-    setScore(0);
+    if (levelIdx === 'daily') {
+      setDailyDay(day);
+    } else {
+      setDailyDay(null);
+      setLevelIndex(levelIdx);
+    }
+    setScore(startScore);
     setLives(5);
     stateRef.current.gameState = 'playing';
-    stateRef.current.score = 0;
+    stateRef.current.score = startScore;
     stateRef.current.lives = 5;
 
     const canvas = canvasRef.current;
@@ -253,7 +280,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
     const CANVAS_WIDTH = 480;
     const CANVAS_HEIGHT = 280;
     const GRAVITY = 0.55;
-    const LEVEL_WIDTH = 3400;
+    const LEVEL_WIDTH = level.width;
 
     const player = {
       x: 60,
@@ -275,115 +302,26 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       y: number;
       w: number;
       h: number;
-      type: 'ground' | 'brick' | 'question' | 'pipe' | 'rugpull' | 'hollow_column';
+      type: PlatformType;
       hit?: boolean;
       shake?: number;
       falling?: boolean;
       fallSpeed?: number;
     }
 
-    const platforms: Platform[] = [
-      { x: 0, y: 240, w: 715, h: 40, type: 'ground' },
-      { x: 775, y: 240, w: 265, h: 40, type: 'ground' },
-      { x: 1095, y: 240, w: 285, h: 40, type: 'ground' },
-      { x: 1460, y: 240, w: 700, h: 40, type: 'ground' },
-      { x: 2240, y: 240, w: 1100, h: 40, type: 'ground' },
-
-      { x: 260, y: 205, w: 35, h: 35, type: 'pipe' },
-      { x: 540, y: 190, w: 35, h: 50, type: 'pipe' },
-      { x: 1050, y: 195, w: 35, h: 45, type: 'hollow_column' },
-      { x: 1780, y: 195, w: 35, h: 45, type: 'pipe' },
-
-      { x: 160, y: 165, w: 25, h: 25, type: 'question' },
-      { x: 185, y: 165, w: 25, h: 25, type: 'brick' },
-      { x: 210, y: 165, w: 25, h: 25, type: 'question' },
-      { x: 235, y: 165, w: 25, h: 25, type: 'brick' },
-
-      { x: 380, y: 145, w: 75, h: 20, type: 'brick' },
-      { x: 405, y: 72, w: 25, h: 25, type: 'question' },
-
-      { x: 880, y: 165, w: 25, h: 25, type: 'question' },
-      { x: 930, y: 165, w: 60, h: 20, type: 'brick' },
-      { x: 1180, y: 155, w: 25, h: 25, type: 'question' },
-      { x: 1240, y: 130, w: 75, h: 20, type: 'rugpull' },
-
-      { x: 1560, y: 165, w: 25, h: 25, type: 'brick' },
-      { x: 1585, y: 165, w: 25, h: 25, type: 'question' },
-      { x: 1610, y: 165, w: 25, h: 25, type: 'brick' },
-      { x: 1920, y: 140, w: 90, h: 20, type: 'brick' },
-
-      { x: 2600, y: 220, w: 30, h: 20, type: 'brick' },
-      { x: 2630, y: 200, w: 30, h: 40, type: 'brick' },
-      { x: 2660, y: 180, w: 30, h: 60, type: 'brick' },
-      { x: 2690, y: 160, w: 30, h: 80, type: 'brick' },
-    ];
-
-    interface TrollBlock {
-      x: number;
-      y: number;
-      w: number;
-      h: number;
-      revealed: boolean;
-      label: string;
-      reason: string;
-    }
-
-    const trollBlocks: TrollBlock[] = [
-      { x: 735, y: 170, w: 20, h: 20, revealed: false, label: '😈', reason: 'Bonked head on an invisible block and fell into the abyss! 😈' },
-      { x: 2160, y: 170, w: 20, h: 20, revealed: false, label: '📉', reason: 'Blocked by an invisible wall right before the goal! 📉' },
-    ];
-
-    interface Coin {
-      x: number;
-      y: number;
-      type: 'base' | 'farcaster' | 'fake_airdrop';
-      collected: boolean;
-      tick: number;
-    }
-
-    const coins: Coin[] = [
-      { x: 172, y: 135, type: 'base', collected: false, tick: 0 },
-      { x: 222, y: 135, type: 'farcaster', collected: false, tick: 1 },
-      { x: 395, y: 115, type: 'base', collected: false, tick: 2 },
-      { x: 417, y: 40, type: 'farcaster', collected: false, tick: 3 },
-      { x: 640, y: 200, type: 'base', collected: false, tick: 4 },
-      { x: 892, y: 135, type: 'farcaster', collected: false, tick: 5 },
-      { x: 955, y: 135, type: 'fake_airdrop', collected: false, tick: 6 },
-      { x: 1192, y: 125, type: 'base', collected: false, tick: 7 },
-      { x: 1270, y: 100, type: 'farcaster', collected: false, tick: 8 },
-      { x: 1597, y: 135, type: 'farcaster', collected: false, tick: 9 },
-      { x: 1965, y: 110, type: 'base', collected: false, tick: 10 },
-      { x: 2350, y: 205, type: 'base', collected: false, tick: 11 },
-      { x: 2400, y: 205, type: 'farcaster', collected: false, tick: 12 },
-    ];
-
-    interface Enemy {
-      x: number;
-      y: number;
-      w: number;
-      h: number;
-      vx: number;
-      alive: boolean;
-      rangeStart: number;
-      rangeEnd: number;
-    }
-
-    const enemies: Enemy[] = [
-      { x: 420, y: 220, w: 20, h: 20, vx: -0.9, alive: true, rangeStart: 320, rangeEnd: 520 },
-      { x: 920, y: 220, w: 20, h: 20, vx: -0.9, alive: true, rangeStart: 800, rangeEnd: 1030 },
-      { x: 1200, y: 220, w: 20, h: 20, vx: 0.9, alive: true, rangeStart: 1120, rangeEnd: 1360 },
-      { x: 1650, y: 220, w: 20, h: 20, vx: -1.0, alive: true, rangeStart: 1500, rangeEnd: 1760 },
-      { x: 2000, y: 220, w: 20, h: 20, vx: -1.0, alive: true, rangeStart: 1850, rangeEnd: 2150 },
-      { x: 2450, y: 220, w: 20, h: 20, vx: 0.9, alive: true, rangeStart: 2300, rangeEnd: 2550 },
-    ];
+    // Level data is shared and immutable; every run works on its own copies.
+    const platforms: Platform[] = level.platforms.map((p) => ({ ...p }));
+    const trollBlocks = level.trollBlocks.map((tb) => ({ ...tb, revealed: false }));
+    const coins = level.coins.map((c, i) => ({ ...c, collected: false, tick: i }));
+    const enemies = level.enemies.map((e) => ({ ...e, y: 220, w: 20, h: 20, alive: true }));
 
     const flag = {
-      x: 2850,
+      x: level.flagX,
       y: 90,
       w: 8,
       h: 150,
       reached: false,
-      trolled: false,
+      flees: 0,
     };
 
     const particles: Particle[] = [];
@@ -431,9 +369,8 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
         endGame('gameover');
       } else {
         audio.bonk();
-        const safeCheckpoints = [60, 320, 600, 850, 1100, 1500, 1800, 2300];
-        let safeX = 60;
-        for (const sx of safeCheckpoints) {
+        let safeX = level.checkpoints[0];
+        for (const sx of level.checkpoints) {
           if (sx <= player.x) {
             safeX = sx;
           }
@@ -447,8 +384,20 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       }
     };
 
-    const gameLoop = () => {
+    // Physics is tuned per frame at 60fps; cap the tick rate so 90/120Hz screens don't run the game faster.
+    const FRAME_MS = 1000 / 60;
+    let lastNow: number | null = null;
+    let tickBudget = FRAME_MS;
+
+    const gameLoop = (now: number) => {
       if (stateRef.current.gameState !== 'playing') return;
+      tickBudget = Math.min(tickBudget + (lastNow === null ? 0 : now - lastNow), FRAME_MS * 2);
+      lastNow = now;
+      if (tickBudget < FRAME_MS - 1) {
+        animationFrameId = requestAnimationFrame(gameLoop);
+        return;
+      }
+      tickBudget -= FRAME_MS;
 
       const keys = keysRef.current;
       if (keys.left) {
@@ -532,9 +481,9 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
             if (p.type === 'question' && !p.hit) {
               p.hit = true;
               audio.powerUp();
-              stateRef.current.score += 50;
+              stateRef.current.score += POINTS.question;
               setScore(stateRef.current.score);
-              spawnFloatingText(p.x, p.y - 15, '+50', '#855DCD');
+              spawnFloatingText(p.x, p.y - 15, `+${POINTS.question}`, '#855DCD');
               spawnParticles(p.x + p.w / 2, p.y, '#FBBF24', 10);
             }
           } else if (player.vy < 0 && player.y - player.vy >= p.y + p.h - 6) {
@@ -544,9 +493,9 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
             if (p.type === 'question' && !p.hit) {
               p.hit = true;
               audio.powerUp();
-              stateRef.current.score += 50;
+              stateRef.current.score += POINTS.question;
               setScore(stateRef.current.score);
-              spawnFloatingText(p.x, p.y - 15, '+50', '#855DCD');
+              spawnFloatingText(p.x, p.y - 15, `+${POINTS.question}`, '#855DCD');
               spawnParticles(p.x + p.w / 2, p.y, '#FBBF24', 10);
             } else if (p.type === 'brick') {
               audio.stomp();
@@ -607,9 +556,9 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
 
             if (coin.type === 'fake_airdrop') {
               audio.bonk();
-              stateRef.current.score = Math.max(0, stateRef.current.score - 50);
+              stateRef.current.score = Math.max(0, stateRef.current.score - POINTS.fakePenalty);
               setScore(stateRef.current.score);
-              spawnFloatingText(coin.x, coin.y - 15, 'SCAM AIRDROP! 🤡 -50', '#EF4444');
+              spawnFloatingText(coin.x, coin.y - 15, `SCAM AIRDROP! 🤡 -${POINTS.fakePenalty}`, '#EF4444');
               spawnParticles(coin.x, coin.y, '#EF4444', 15);
               player.vx = player.facing === 'right' ? -8 : 8;
               player.vy = -6;
@@ -617,7 +566,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
               setDeathReason('Greedily grabbed a scam 10K$ airdrop coin! 🤡');
             } else {
               audio.coin();
-              const gain = coin.type === 'farcaster' ? 50 : 20;
+              const gain = POINTS[coin.type];
               stateRef.current.score += gain;
               setScore(stateRef.current.score);
               spawnFloatingText(coin.x, coin.y - 10, `+${gain}`, coin.type === 'farcaster' ? '#C084FC' : '#60A5FA');
@@ -644,9 +593,9 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
               enemy.alive = false;
               player.vy = -7;
               audio.stomp();
-              stateRef.current.score += 80;
+              stateRef.current.score += POINTS.stomp;
               setScore(stateRef.current.score);
-              spawnFloatingText(enemy.x, enemy.y - 10, '+80 STOMP!', '#34D399');
+              spawnFloatingText(enemy.x, enemy.y - 10, `+${POINTS.stomp} STOMP!`, '#34D399');
               spawnParticles(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#EF4444', 12);
             } else if (player.invulnerable <= 0) {
               recordDeath('Liquidated by the FUD market cap monster! 🐻');
@@ -656,18 +605,18 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
         }
       }
 
-      if (player.x + player.width >= 2810 && !flag.trolled) {
-        flag.trolled = true;
-        flag.x = 3120;
+      if (flag.flees < level.fleeTo.length && player.x + player.width >= flag.x - 40) {
+        spawnFloatingText(flag.x, 110, 'NOT YET! DYOR! 🏃💨', '#FBBF24');
+        spawnParticles(flag.x, 120, '#FBBF24', 15);
+        flag.x = level.fleeTo[flag.flees];
+        flag.flees++;
         audio.bonk();
-        spawnFloatingText(2850, 110, 'NOT YET! DYOR! 🏃💨', '#FBBF24');
-        spawnParticles(2850, 120, '#FBBF24', 15);
       } else if (player.x + player.width >= flag.x && !flag.reached) {
         flag.reached = true;
         audio.powerUp();
-        stateRef.current.score += 500;
+        stateRef.current.score += POINTS.flag;
         setScore(stateRef.current.score);
-        spawnFloatingText(flag.x, flag.y, '+500 REAL GOAL! 🏆', '#FBBF24');
+        spawnFloatingText(flag.x, flag.y, `+${POINTS.flag} REAL GOAL! 🏆`, '#FBBF24');
         setTimeout(() => {
           endGame('victory');
         }, 800);
@@ -830,7 +779,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       ctx.arc(flag.x + flag.w / 2, flag.y, 6, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = flag.trolled ? '#DC2626' : '#0052FF';
+      ctx.fillStyle = flag.flees > 0 ? '#DC2626' : '#0052FF';
       ctx.beginPath();
       ctx.moveTo(flag.x + flag.w, flag.y + 10);
       ctx.lineTo(flag.x + flag.w + 35, flag.y + 25);
@@ -912,6 +861,24 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
       setGameState(outcome);
       stateRef.current.gameState = outcome;
 
+      if (levelIdx === 'daily') {
+        const dayKey = fid ? `fc_farbase_daily_${day}_${fid}` : `fc_farbase_daily_${day}`;
+        try {
+          const prevBest = parseInt(localStorage.getItem(dayKey) || '0', 10) || 0;
+          if (stateRef.current.score > prevBest) localStorage.setItem(dayKey, stateRef.current.score.toString());
+          if (day === dailyNumber()) setDailyBest(Math.max(prevBest, stateRef.current.score));
+        } catch {}
+        onDailyRunEnd?.({ day, score: stateRef.current.score });
+      } else if (outcome === 'victory' && levelIdx + 1 < LEVELS.length) {
+        setUnlockedLevel((prev) => {
+          const next = Math.max(prev, levelIdx + 1);
+          try {
+            localStorage.setItem(unlockedKey, next.toString());
+          } catch {}
+          return next;
+        });
+      }
+
       const finalScore = stateRef.current.score;
       if (finalScore > stateRef.current.highScore) {
         setHighScore(finalScore);
@@ -932,7 +899,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
         animationFrameId = null;
       }
     };
-  }, [fid, onHighScoreChange]);
+  }, [fid, onHighScoreChange, onDailyRunEnd, unlockedKey]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -959,7 +926,9 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
   }, []);
 
   const handleShareScore = async () => {
-    const castText = `💀 I just died ${deaths} times in FarBase Rush: Trap Adventure! 😂\nLast cause: "${deathReason}"\n\nThink you can beat level 1 without rage quitting?`;
+    const castText = dailyDay !== null
+      ? `📅 FarBase Rush Daily #${dailyDay}: ${score} pts, ${deaths} total deaths 💀\nLast cause: "${deathReason}"\n\nSame level for everyone today. Can you beat my score?`
+      : `💀 I just died ${deaths} times in FarBase Rush: Trap Adventure! 😂\nLast cause: "${deathReason}"\n\nThink you can beat ${runLabel} without rage quitting?`;
     const frameUrl = process.env.NEXT_PUBLIC_HOST
       ? `https://${process.env.NEXT_PUBLIC_HOST}`
       : 'https://farcaster-frame-sepia.vercel.app';
@@ -1037,6 +1006,9 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
           ))}
         </div>
         <div className="flex items-center gap-3">
+          <span className="text-purple-300 font-bold">
+            {runLabel}
+          </span>
           <span className="text-gray-400 font-medium">
             Score: <strong className="text-white text-sm">{score}</strong>
           </span>
@@ -1058,11 +1030,11 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
 
         {gameState === 'idle' && (
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-600 to-purple-600 flex items-center justify-center text-2xl shadow-xl mb-3 animate-bounce">
+            <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-600 to-purple-600 items-center justify-center text-2xl shadow-xl mb-3 animate-bounce">
               ⚡
             </div>
-            <h4 className="font-extrabold text-white text-base mb-1">FarBase Rush: Trap Adventure</h4>
-            <p className="text-xs text-red-300 max-w-xs mb-4">
+            <h4 className="font-extrabold text-white text-base mb-3 sm:mb-1">FarBase Rush: Trap Adventure</h4>
+            <p className="hidden sm:block text-xs text-red-300 max-w-xs mb-4">
               Watch out for invisible trap blocks, fake scam coins, and collapsing platforms!
             </p>
             <div className="flex gap-2">
@@ -1074,13 +1046,55 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
                 <span>HOW TO PLAY</span>
               </button>
               <button
-                onClick={startGame}
+                onClick={() => startGame(dailyDay !== null ? 'daily' : levelIndex)}
                 className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-500 hover:to-purple-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg transition active:scale-95"
               >
                 <Play className="w-4 h-4 fill-white" />
-                <span>START RUN</span>
+                <span>{dailyDay !== null ? `START DAILY #${today}` : `START LV ${levelIndex + 1}`}</span>
               </button>
             </div>
+            <div className="flex gap-1.5 mt-3" role="group" aria-label="Choose level">
+              {LEVELS.map((lv, i) => (
+                <button
+                  key={lv.name}
+                  onClick={() => {
+                    setDailyDay(null);
+                    setLevelIndex(i);
+                  }}
+                  disabled={i > unlockedLevel}
+                  aria-pressed={dailyDay === null && i === levelIndex}
+                  title={i > unlockedLevel ? 'Clear the previous level to unlock' : lv.name}
+                  className={`py-1 px-2.5 rounded-lg text-[11px] font-bold flex items-center gap-1 border transition ${
+                    dailyDay === null && i === levelIndex
+                      ? 'bg-purple-600 border-purple-400 text-white'
+                      : i > unlockedLevel
+                      ? 'bg-gray-900 border-gray-800 text-gray-600 cursor-not-allowed'
+                      : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  {i > unlockedLevel && <Lock className="w-3 h-3" />}
+                  <span>Lv {i + 1}</span>
+                </button>
+              ))}
+              <button
+                onClick={() => setDailyDay(today)}
+                aria-pressed={dailyDay !== null}
+                title="New level every day (UTC), same for everyone"
+                className={`py-1 px-2.5 rounded-lg text-[11px] font-bold flex items-center gap-1 border transition ${
+                  dailyDay !== null
+                    ? 'bg-yellow-500 border-yellow-300 text-black'
+                    : 'bg-yellow-950/40 border-yellow-700/50 text-yellow-300 hover:bg-yellow-900/40'
+                }`}
+              >
+                <CalendarDays className="w-3 h-3" />
+                <span>Daily #{today}</span>
+              </button>
+            </div>
+            {dailyDay !== null && (
+              <p className="text-[11px] text-yellow-300/90 mt-2">
+                {dailyBest > 0 ? `Your best today: ${dailyBest} pts` : 'New level every day. Same map for everyone!'}
+              </p>
+            )}
           </div>
         )}
 
@@ -1096,7 +1110,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
             </p>
             <div className="flex gap-2">
               <button
-                onClick={startGame}
+                onClick={() => startGame(dailyDay !== null ? 'daily' : levelIndex)}
                 className="py-2 px-4 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs flex items-center gap-1.5 transition active:scale-95"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -1116,21 +1130,37 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
         {gameState === 'victory' && (
           <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center animate-fade-in">
             <span className="text-3xl mb-1">🏆</span>
-            <h4 className="font-extrabold text-yellow-400 text-base mb-1">TRAP MASTER! LEVEL CLEARED</h4>
+            <h4 className="font-extrabold text-yellow-400 text-base mb-1">
+              {dailyDay !== null
+                ? `DAILY #${dailyDay} CLEARED!`
+                : levelIndex + 1 < LEVELS.length
+                ? `LEVEL ${levelIndex + 1} CLEARED!`
+                : 'TRAP MASTER! ALL LEVELS CLEARED'}
+            </h4>
             <p className="text-xs text-gray-300 mb-1">
               You survived all troll traps! Final Score: <strong className="text-yellow-400 font-bold text-sm">{score}</strong>
             </p>
             <p className="text-[11px] text-green-400 font-semibold mb-3">
-              Unlocked +0.2x Airdrop Multiplier!
+              {dailyDay !== null ? `Your best today: ${Math.max(dailyBest, score)} pts` : 'Unlocked +0.2x Season Multiplier!'}
             </p>
             <div className="flex gap-2">
-              <button
-                onClick={startGame}
-                className="py-2 px-4 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs flex items-center gap-1.5 transition active:scale-95"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Play Again</span>
-              </button>
+              {dailyDay === null && levelIndex + 1 < LEVELS.length ? (
+                <button
+                  onClick={() => startGame(levelIndex + 1, true)}
+                  className="py-2 px-4 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:opacity-90 text-black font-bold text-xs flex items-center gap-1.5 transition active:scale-95"
+                >
+                  <span>Next: {LEVELS[levelIndex + 1].name}</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => startGame(dailyDay !== null ? 'daily' : 0)}
+                  className="py-2 px-4 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs flex items-center gap-1.5 transition active:scale-95"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Play Again</span>
+                </button>
+              )}
               <button
                 onClick={handleShareScore}
                 className="py-2 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition active:scale-95"
@@ -1229,11 +1259,11 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
               <div>
                 <h4 className="font-semibold text-white mb-1">🪙 Scoring &amp; Rewards</h4>
                 <ul className="space-y-1 text-gray-300">
-                  <li>🔵 <strong>Base Coin:</strong> +20 pts</li>
-                  <li>🟣 <strong>Farcaster Coin:</strong> +50 pts</li>
-                  <li>❓ <strong>Mystery Block:</strong> +50 pts (hit from below)</li>
-                  <li>👾 <strong>Stomp FUD:</strong> +80 pts &amp; bounce</li>
-                  <li>🏆 <strong>Goal Flag:</strong> +500 pts</li>
+                  <li>🔵 <strong>Base Coin:</strong> +{POINTS.base} pts</li>
+                  <li>🟣 <strong>Farcaster Coin:</strong> +{POINTS.farcaster} pts</li>
+                  <li>❓ <strong>Mystery Block:</strong> +{POINTS.question} pts (hit from below)</li>
+                  <li>👾 <strong>Stomp FUD:</strong> +{POINTS.stomp} pts &amp; bounce</li>
+                  <li>🏆 <strong>Goal Flag:</strong> +{POINTS.flag} pts</li>
                 </ul>
               </div>
 
@@ -1248,7 +1278,7 @@ export function BaseMarioGame({ fid, onHighScoreChange }: BaseMarioGameProps) {
               </div>
 
               <div className="p-2.5 rounded-xl bg-green-950/30 border border-green-800/40 text-green-200">
-                <p>✨ <strong>Airdrop Bonus:</strong> Score 100+ points to unlock an active <strong>+0.2x Multiplier</strong> on your airdrop eligibility!</p>
+                <p>✨ <strong>Season Bonus:</strong> Score 100+ points to unlock an active <strong>+0.2x Multiplier</strong> on your season score!</p>
               </div>
             </div>
 

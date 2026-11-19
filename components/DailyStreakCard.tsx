@@ -80,7 +80,7 @@ export function DailyStreakCard({ streakDays, onCheckIn, fid }: DailyStreakCardP
           </div>
           <div>
             <h3 className="font-bold text-white text-sm">Daily Builder Check-in</h3>
-            <p className="text-xs text-gray-400">Streaks boost DAU &amp; grant multipliers</p>
+            <p className="text-xs text-gray-400">Streaks boost your season multiplier</p>
           </div>
         </div>
         <div className="px-2.5 py-1 rounded-full bg-amber-950/40 border border-amber-600/30 text-amber-300 font-bold text-xs flex items-center gap-1">

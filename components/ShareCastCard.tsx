@@ -13,7 +13,7 @@ export function ShareCastCard({ fid, streakDays }: ShareCastCardProps) {
   const [copied, setCopied] = useState(false);
 
   const handleShareCast = async () => {
-    const text = `Just checked my Builder Airdrop score on @farcaster! 🚀\n🔥 Current streak: ${streakDays} days\nCheck your allocation & claim your daily streak:`;
+    const text = `Keeping my FarBase streak alive on @farcaster! 🚀\n🔥 Current streak: ${streakDays} days\nPlay FarBase Rush & check in daily:`;
     const appUrl = typeof window !== 'undefined'
       ? window.location.origin
       : (process.env.NEXT_PUBLIC_HOST ? `https://${process.env.NEXT_PUBLIC_HOST}` : 'https://farcaster-frame-sepia.vercel.app');
@@ -56,7 +56,7 @@ export function ShareCastCard({ fid, streakDays }: ShareCastCardProps) {
         <h3 className="font-bold text-white text-sm">Boost Viral Engagement</h3>
       </div>
       <p className="text-xs text-gray-400 mb-4">
-        Share your streak to Warpcast. Organic casts drive engagement and builder grant allocations.
+        Share your streak to Warpcast. Challenge friends to beat your streak.
       </p>
 
       <div className="flex items-center gap-2">

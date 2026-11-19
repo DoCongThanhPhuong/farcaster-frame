@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   const html = `<!DOCTYPE html>
 <html>
 <head>
-  <meta property="og:title" content="Airdrop Status for FID #${fid}" />
+  <meta property="og:title" content="FarBase • FID #${fid}" />
   <meta property="fc:frame" content="vNext" />
   <meta property="fc:frame:image" content="${baseUrl}/opengraph-image" />
   <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
 </head>
 <body>
   <h1>FID #${fid} Verified</h1>
-  <p>Open Mini App to claim daily streak and mint Base pass.</p>
+  <p>Open the Mini App to keep your daily streak and play FarBase Rush.</p>
 </body>
 </html>`;
 

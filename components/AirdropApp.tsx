@@ -10,6 +10,8 @@ import { OnchainMintCard } from './OnchainMintCard';
 import { ShareCastCard } from './ShareCastCard';
 import { BuilderAirdropGuideModal } from './BuilderAirdropGuideModal';
 import { BaseMarioGame } from './BaseMarioGame';
+import { DailyLeaderboard, type DailyRun } from './DailyLeaderboard';
+import { dailyNumber } from '@/lib/levels';
 
 export function AirdropApp() {
   const { isConnected } = useAccount();
@@ -24,8 +26,9 @@ export function AirdropApp() {
   const [customFid, setCustomFid] = useState<number | null>(null);
   const [streakDays, setStreakDays] = useState(0);
   const [hasMintedPass, setHasMintedPass] = useState(false);
-  const [activeTab, setActiveTab] = useState<'airdrop' | 'game'>('airdrop');
+  const [activeTab, setActiveTab] = useState<'airdrop' | 'game'>('game');
   const [gameHighScore, setGameHighScore] = useState(0);
+  const [lastDailyRun, setLastDailyRun] = useState<DailyRun | null>(null);
 
   const activeFid = customFid || user?.fid || null;
 
@@ -96,30 +99,7 @@ export function AirdropApp() {
           </div>
         )}
 
-        <AirdropEligibilityCard
-          fid={activeFid}
-          username={user?.username}
-          displayName={user?.displayName}
-          pfpUrl={user?.pfpUrl}
-          isWalletConnected={isConnected}
-          streakDays={streakDays}
-          hasMintedPass={hasMintedPass}
-          gameHighScore={gameHighScore}
-          onFidChange={(f) => setCustomFid(f)}
-          isInMiniApp={isInMiniApp}
-        />
-
         <div className="flex rounded-xl bg-gray-900/90 p-1 border border-gray-800 shadow-md">
-          <button
-            onClick={() => setActiveTab('airdrop')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'airdrop'
-                ? 'bg-purple-600 text-white shadow-lg'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <span>🪂 Airdrop Tasks</span>
-          </button>
           <button
             onClick={() => setActiveTab('game')}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
@@ -133,10 +113,33 @@ export function AirdropApp() {
               {gameHighScore > 0 ? `${gameHighScore} pts` : 'HOT'}
             </span>
           </button>
+          <button
+            onClick={() => setActiveTab('airdrop')}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'airdrop'
+                ? 'bg-purple-600 text-white shadow-lg'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <span>🔥 Daily Tasks</span>
+          </button>
         </div>
 
         {activeTab === 'airdrop' ? (
           <>
+            <AirdropEligibilityCard
+              fid={activeFid}
+              username={user?.username}
+              displayName={user?.displayName}
+              pfpUrl={user?.pfpUrl}
+              isWalletConnected={isConnected}
+              streakDays={streakDays}
+              hasMintedPass={hasMintedPass}
+              gameHighScore={gameHighScore}
+              onFidChange={(f) => setCustomFid(f)}
+              isInMiniApp={isInMiniApp}
+            />
+
             <DailyStreakCard
               streakDays={streakDays}
               onCheckIn={handleCheckIn}
@@ -161,6 +164,15 @@ export function AirdropApp() {
             <BaseMarioGame
               fid={activeFid}
               onHighScoreChange={(s) => setGameHighScore(s)}
+              onDailyRunEnd={setLastDailyRun}
+            />
+
+            <DailyLeaderboard
+              day={lastDailyRun?.day ?? dailyNumber()}
+              isInMiniApp={isInMiniApp}
+              username={user?.username}
+              fid={activeFid}
+              lastRun={lastDailyRun}
             />
 
             <ShareCastCard

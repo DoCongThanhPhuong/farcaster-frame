@@ -13,7 +13,7 @@ export function BuilderAirdropGuideModal() {
         className="w-full py-2.5 px-4 rounded-xl border border-dashed border-gray-700 bg-gray-900/30 hover:bg-gray-800/40 text-gray-300 font-semibold text-xs flex items-center justify-center gap-2 transition"
       >
         <Info className="w-4 h-4 text-blue-400" />
-        <span>About This App &amp; Builder Rewards Guide</span>
+        <span>About FarBase &amp; Season Points</span>
       </button>
 
       {isOpen && (
@@ -23,7 +23,7 @@ export function BuilderAirdropGuideModal() {
               <div className="flex items-center gap-2">
                 <Coins className="w-5 h-5 text-yellow-400" />
                 <h3 className="font-bold text-white text-base">
-                  Farcaster &amp; Base Builder Hub
+                  About FarBase
                 </h3>
               </div>
               <button
@@ -37,13 +37,13 @@ export function BuilderAirdropGuideModal() {
             <div className="p-3 bg-purple-950/30 border border-purple-800/40 rounded-xl space-y-1">
               <p className="font-semibold text-purple-200">What is this Mini App?</p>
               <p className="text-gray-300">
-                A verified Farcaster Mini App on Base L2 designed to reward builders, drive daily engagement (DAU), and generate onchain transactions for ecosystem builder grants.
+                A Farcaster Mini App on Base with daily check-ins and the FarBase Rush arcade game. Season points are in-game only: they are not a token, have no cash value, and no airdrop is promised.
               </p>
             </div>
 
             <div className="space-y-3">
               <h4 className="font-bold text-white text-xs uppercase tracking-wider text-gray-400">
-                How to Earn &amp; Maximize Your Score
+                How to Raise Your Season Score
               </h4>
 
               <div className="flex gap-3 items-start p-2.5 rounded-xl bg-gray-900/50 border border-gray-800">
@@ -62,7 +62,7 @@ export function BuilderAirdropGuideModal() {
                 </div>
                 <div>
                   <p className="font-bold text-white">2. Maintain Daily Streaks</p>
-                  <p className="text-gray-400">Check in every 24 hours. Each streak day adds +0.15x to your multiplier and qualifies for Moxie daily rewards.</p>
+                  <p className="text-gray-400">Check in every 24 hours. Each streak day adds +0.15x to your multiplier.</p>
                 </div>
               </div>
 
@@ -71,8 +71,8 @@ export function BuilderAirdropGuideModal() {
                   <Coins className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="font-bold text-white">3. Mint Onchain Pass on Base</p>
-                  <p className="text-gray-400">Free mint on Base L2 (+0.5x multiplier). Generates real onchain volume required for Base Builder Grants.</p>
+                  <p className="font-bold text-white">3. Check In Onchain on Base</p>
+                  <p className="text-gray-400">Send a 0 ETH transaction on Base (you pay gas) for a +0.5x multiplier.</p>
                 </div>
               </div>
 

@@ -26,10 +26,10 @@ export async function GET() {
     </g>
 
     <text x="90" y="240" fill="#ffffff" font-size="54" font-weight="800" font-family="-apple-system, sans-serif">
-      Farcaster &amp; Base Builder Airdrop
+      FarBase Rush
     </text>
     <text x="90" y="300" fill="#9CA3AF" font-size="24" font-family="-apple-system, sans-serif">
-      Daily Check-in • Onchain Badges • Multiplier Calculation
+      Daily Check-in • Arcade Game • Season Points
     </text>
 
     <g transform="translate(90, 390)">
@@ -39,8 +39,8 @@ export async function GET() {
 
       <g transform="translate(480, 0)">
         <rect width="450" height="110" rx="16" fill="#1b1c2b" stroke="#2e3044"/>
-        <text x="30" y="45" fill="#34D399" font-size="22" font-weight="bold" font-family="-apple-system, sans-serif">⚡ Onchain Base Mint</text>
-        <text x="30" y="80" fill="#9CA3AF" font-size="16" font-family="-apple-system, sans-serif">Claim verified builder pass with Wagmi</text>
+        <text x="30" y="45" fill="#34D399" font-size="22" font-weight="bold" font-family="-apple-system, sans-serif">⚡ Onchain Check-in</text>
+        <text x="30" y="80" fill="#9CA3AF" font-size="16" font-family="-apple-system, sans-serif">Daily check-in transaction on Base</text>
       </g>
     </g>
   </svg>`;

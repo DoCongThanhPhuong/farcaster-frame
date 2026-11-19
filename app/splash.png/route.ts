@@ -7,8 +7,8 @@ export async function GET() {
     <circle cx="300" cy="270" r="140" fill="#855DCD" opacity="0.15"/>
     <circle cx="300" cy="270" r="110" fill="#1e1838"/>
     <text x="300" y="295" text-anchor="middle" fill="#FFFFFF" font-size="96" font-family="sans-serif">🪂</text>
-    <text x="300" y="440" text-anchor="middle" fill="#FFFFFF" font-size="34" font-weight="bold" font-family="sans-serif">FARCASTER AIRDROP</text>
-    <text x="300" y="480" text-anchor="middle" fill="#8B8CA3" font-size="20" font-family="sans-serif">Builder Rewards &amp; Daily Claim</text>
+    <text x="300" y="440" text-anchor="middle" fill="#FFFFFF" font-size="34" font-weight="bold" font-family="sans-serif">FARBASE RUSH</text>
+    <text x="300" y="480" text-anchor="middle" fill="#8B8CA3" font-size="20" font-family="sans-serif">Daily Streaks &amp; Arcade</text>
   </svg>`;
 
   const pngBuffer = await sharp(Buffer.from(svg)).png().toBuffer();

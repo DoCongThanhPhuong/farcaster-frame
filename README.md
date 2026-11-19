@@ -70,6 +70,15 @@ npm test
    - `NEXT_PUBLIC_HOST` (ví dụ: `your-project.vercel.app`)
 5. Redeploy lại Vercel để áp dụng chữ ký.
 
+### 4b. Bật Leaderboard Daily Challenge (Upstash Redis)
+1. Trên Vercel: **Storage → Marketplace → Upstash (Redis)**, tạo database và connect vào project. Vercel tự thêm `KV_REST_API_URL` và `KV_REST_API_TOKEN` (hoặc tự đặt `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`).
+2. Đảm bảo `NEXT_PUBLIC_HOST` khớp đúng domain của Mini App: token Quick Auth được cấp cho domain đó, server verify theo domain này.
+3. Redeploy. Chưa cấu hình thì `/api/leaderboard` trả `503` và card leaderboard tự ẩn, game vẫn chạy bình thường.
+
+Điểm chỉ được gửi từ trong Farcaster client (Quick Auth xác thực FID). Server chỉ nhận điểm của ngày hiện tại (cho thêm 10 phút sau nửa đêm UTC với lượt chơi dở) và từ chối điểm vượt quá mức tối đa có thể đạt trên màn của ngày đó.
+
+> ⚠️ Điểm vẫn do client tự báo: ai có token Quick Auth cũng gửi được điểm tối đa. Đủ cho bảng xếp hạng vui, **chưa đủ để gắn giải thưởng** — trước đó cần xác minh lượt chơi phía server.
+
 ### 5. Cast Lên Warpcast Để Bắt Đầu Tính Điểm Builder
 - Đăng cast chứa link Frame vào các channel: `/base`, `/farcaster`, `/dev`, `/frames`.
 - Khi user bấm nút trên feed, Mini App sẽ mở ra với đầy đủ tính năng claim và mint.
