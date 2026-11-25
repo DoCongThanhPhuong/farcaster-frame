@@ -8,9 +8,9 @@ export function GET() {
           width: '100%',
           height: '100%',
           display: 'flex',
-          padding: 48,
-          background: 'linear-gradient(135deg, #070812 0%, #12142b 55%, #1c1136 100%)',
-          color: '#FFFFFF',
+          padding: 44,
+          background: '#0d0f12',
+          color: '#f3f4f6',
           fontFamily: 'sans-serif',
         }}
       >
@@ -22,64 +22,63 @@ export function GET() {
             flexDirection: 'column',
             justifyContent: 'space-between',
             padding: 48,
-            borderRadius: 32,
-            background: '#0f1224',
-            border: '2px solid #2c3263',
+            borderRadius: 24,
+            background: '#15181d',
+            border: '2px solid #262b34',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div style={{ display: 'flex', gap: 14 }}>
-              <div style={{ display: 'flex', padding: '8px 22px', borderRadius: 20, background: 'rgba(124,58,237,0.28)', color: '#DDD6FE', fontSize: 18, fontWeight: 700 }}>
-                FARCASTER
-              </div>
-              <div style={{ display: 'flex', padding: '8px 22px', borderRadius: 20, background: 'rgba(2,132,199,0.28)', color: '#7DD3FC', fontSize: 18, fontWeight: 700 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ display: 'flex', padding: '8px 18px', borderRadius: 8, background: '#0052ff', color: '#ffffff', fontSize: 17, fontWeight: 700 }}>
                 BASE L2
               </div>
-              <div style={{ display: 'flex', padding: '8px 22px', borderRadius: 20, background: 'rgba(244,63,94,0.22)', color: '#FDA4AF', fontSize: 18, fontWeight: 700 }}>
+              <div style={{ display: 'flex', padding: '8px 18px', borderRadius: 8, background: '#ff5500', color: '#ffffff', fontSize: 17, fontWeight: 700 }}>
                 TRAP ARCADE
+              </div>
+              <div style={{ display: 'flex', padding: '8px 18px', borderRadius: 8, background: '#1d2128', border: '1px solid #363d4a', color: '#b4bcc8', fontSize: 17, fontWeight: 700 }}>
+                VI • EN • ES • JA
               </div>
             </div>
 
             <div
               style={{
-                width: 96,
-                height: 96,
-                borderRadius: 24,
-                background: '#171b38',
-                border: '2px solid #4C1D95',
+                width: 84,
+                height: 84,
+                borderRadius: 18,
+                background: '#0052ff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <svg width="56" height="56" viewBox="0 0 24 24">
-                <polygon points="13.5,2 5,13.2 10.6,13.2 9.5,22 19,10.4 13.2,10.4" fill="#38BDF8" />
+              <svg width="48" height="48" viewBox="0 0 24 24">
+                <polygon points="13.5,2.5 5.5,13 10.7,13 9.5,21.5 18.5,11 13.2,11" fill="#ffffff" />
               </svg>
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ fontSize: 70, fontWeight: 800, letterSpacing: -1 }}>FarBase Rush</div>
-            <div style={{ fontSize: 26, color: '#CBD5E1' }}>
-              3 Campaign Worlds • Daily Seeded Challenge • Top 10 Leaderboard
+            <div style={{ fontSize: 72, fontWeight: 800, letterSpacing: -1.5 }}>FARBASE RUSH</div>
+            <div style={{ fontSize: 26, color: '#b4bcc8' }}>
+              3 Campaign Worlds • Daily Seeded Challenge • Verified FID Leaderboard
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 24 }}>
+          <div style={{ display: 'flex', gap: 20 }}>
             <div
               style={{
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 8,
-                padding: '22px 28px',
-                borderRadius: 20,
-                background: '#161a35',
-                border: '1px solid #2e3568',
+                gap: 6,
+                padding: '22px 26px',
+                borderRadius: 14,
+                background: '#0d0f12',
+                border: '1px solid #262b34',
               }}
             >
-              <div style={{ fontSize: 24, fontWeight: 700, color: '#FBBF24' }}>Daily Global Map (UTC)</div>
-              <div style={{ fontSize: 18, color: '#94A3B8' }}>Same traps for everyone • Verified FID ranking</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#f59e0b' }}>Daily Global Map (UTC)</div>
+              <div style={{ fontSize: 17, color: '#8892a2' }}>Identical traps for every player • Top 10 daily ranking</div>
             </div>
 
             <div
@@ -87,15 +86,15 @@ export function GET() {
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 8,
-                padding: '22px 28px',
-                borderRadius: 20,
-                background: '#161a35',
-                border: '1px solid #2e3568',
+                gap: 6,
+                padding: '22px 26px',
+                borderRadius: 14,
+                background: '#0d0f12',
+                border: '1px solid #262b34',
               }}
             >
-              <div style={{ fontSize: 24, fontWeight: 700, color: '#38BDF8' }}>VI • EN • ES • JA</div>
-              <div style={{ fontSize: 18, color: '#94A3B8' }}>Hidden blocks, rug-pulls &amp; FUD monsters</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#ff5500' }}>Tactile Precision Platformer</div>
+              <div style={{ fontSize: 17, color: '#8892a2' }}>Dodge hidden blocks, rug-pulls &amp; patrolling FUD bots</div>
             </div>
           </div>
         </div>

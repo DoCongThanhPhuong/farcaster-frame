@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Share2, Check, Link2, Swords } from 'lucide-react';
+import { Share2, Check, Link2 } from 'lucide-react';
 import sdk from '@farcaster/frame-sdk';
 import { I18N, type Locale } from '@/lib/i18n';
 
@@ -52,39 +52,29 @@ export function ShareCastCard({ locale, highScore, day }: ShareCastCardProps) {
   };
 
   return (
-    <section className="arcade-cabinet rounded-2xl p-4 sm:p-5">
-      <div className="flex items-start gap-3 mb-3.5">
-        <div
-          className="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/35 flex items-center justify-center shrink-0"
-          aria-hidden="true"
-        >
-          <Swords className="w-4 h-4 text-violet-300" />
-        </div>
-        <div>
-          <h2 className="font-bold text-white text-sm">{t.shareTitle}</h2>
-          <p className="text-xs text-slate-300 mt-0.5">{t.shareDesc}</p>
-        </div>
-      </div>
+    <section className="bg-surface border border-line rounded-xl p-4">
+      <h2 className="font-bold text-ink text-sm">{t.shareTitle}</h2>
+      <p className="text-xs text-ink-secondary mt-1 mb-3.5 leading-relaxed">{t.shareDesc}</p>
 
-      <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => shareCast(t.castInvite(highScore, day))}
-          className="flex-1 min-h-[44px] px-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-violet-950/50 transition-colors"
+          className="flex-1 min-h-[40px] px-3.5 rounded-lg bg-brand hover:bg-brand-bright text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
         >
-          <Share2 className="w-4 h-4" aria-hidden="true" />
+          <Share2 className="w-3.5 h-3.5" aria-hidden="true" />
           <span>{t.shareBtn}</span>
         </button>
 
         <button
           type="button"
           onClick={handleCopyLink}
-          className="min-h-[44px] px-3.5 rounded-xl border border-[var(--border-subtle)] bg-[#12152a] hover:bg-[#191d38] text-slate-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
+          className="min-h-[40px] px-3 rounded-lg border border-line-strong bg-elevated hover:bg-elevated-hover text-ink font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
         >
           {copied ? (
-            <Check className="w-4 h-4 text-emerald-400" aria-hidden="true" />
+            <Check className="w-3.5 h-3.5 text-ok" aria-hidden="true" />
           ) : (
-            <Link2 className="w-4 h-4 text-slate-400" aria-hidden="true" />
+            <Link2 className="w-3.5 h-3.5 text-ink-secondary" aria-hidden="true" />
           )}
           <span>{copied ? t.copiedBtn : t.copyBtn}</span>
         </button>

@@ -1,32 +1,35 @@
 @import "tailwindcss";
 
-:root {
-  --bg-void: #070812;
-  --border-subtle: #262b52;
-  --accent-secondary: #38bdf8;
-  --text-primary: #f1f5f9;
+@theme {
+  --color-canvas: #0d0f12;
+  --color-surface: #15181d;
+  --color-elevated: #1d2128;
+  --color-elevated-hover: #252a33;
+  --color-line: #262b34;
+  --color-line-strong: #363d4a;
+  --color-ink: #f3f4f6;
+  --color-ink-secondary: #b4bcc8;
+  --color-ink-muted: #8892a2;
+  --color-brand: #0052ff;
+  --color-brand-bright: #3b82f6;
+  --color-signal: #ff5500;
+  --color-signal-hover: #ff6a1f;
+  --color-gold: #f59e0b;
+  --color-danger: #ef4444;
+  --color-ok: #10b981;
 }
 
 @layer base {
-  * {
-    box-sizing: border-box;
-  }
-
   html {
-    background-color: var(--bg-void);
+    background-color: var(--color-canvas);
     color-scheme: dark;
   }
 
   body {
-    background-color: var(--bg-void);
-    background-image:
-      radial-gradient(circle at 15% 0%, rgba(124, 58, 237, 0.16), transparent 42%),
-      radial-gradient(circle at 85% 10%, rgba(56, 189, 248, 0.12), transparent 38%);
-    color: var(--text-primary);
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
     font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", "Hiragino Sans", "Noto Sans JP", sans-serif;
     min-height: 100dvh;
-    margin: 0;
-    padding: 0;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -37,23 +40,9 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--accent-secondary);
+    outline: 2px solid var(--color-brand-bright);
     outline-offset: 2px;
   }
-}
-
-.arcade-cabinet {
-  background: linear-gradient(180deg, rgba(23, 26, 50, 0.96) 0%, rgba(13, 15, 30, 0.98) 100%);
-  border: 1px solid var(--border-subtle);
-  box-shadow:
-    0 20px 50px -20px rgba(0, 0, 0, 0.8),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-.arcade-screen-bezel {
-  box-shadow:
-    inset 0 0 0 1px rgba(56, 189, 248, 0.16),
-    0 0 28px -8px rgba(124, 58, 237, 0.35);
 }
 
 @media (prefers-reduced-motion: reduce) {

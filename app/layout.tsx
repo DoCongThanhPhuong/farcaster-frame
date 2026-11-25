@@ -23,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
         name: 'FarBase Rush',
         url: baseUrl,
         splashImageUrl: `${baseUrl}/splash.png`,
-        splashBackgroundColor: '#070812',
+        splashBackgroundColor: '#0d0f12',
       },
     },
   };
@@ -62,7 +62,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi">
-      <body className="min-h-dvh antialiased selection:bg-violet-500/30 selection:text-white">
+      <body className="min-h-dvh antialiased selection:bg-brand/30 selection:text-white">
         {children}
       </body>
     </html>

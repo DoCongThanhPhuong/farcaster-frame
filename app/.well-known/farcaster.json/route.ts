@@ -24,7 +24,7 @@ export async function GET(req: Request) {
       imageUrl: `${baseUrl}/opengraph-image`,
       buttonTitle: 'Play FarBase Rush',
       splashImageUrl: `${baseUrl}/splash.png`,
-      splashBackgroundColor: '#070812',
+      splashBackgroundColor: '#0d0f12',
     },
   };
 

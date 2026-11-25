@@ -7,27 +7,28 @@ export function GET() {
         style={{
           width: '100%',
           height: '100%',
+          borderRadius: 56,
+          background: '#0052ff',
           display: 'flex',
-          padding: 10,
-          borderRadius: 60,
-          background: 'linear-gradient(135deg, #38BDF8 0%, #7C3AED 50%, #F43F5E 100%)',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
         }}
       >
+        <svg width="150" height="150" viewBox="0 0 24 24">
+          <polygon points="13.5,2.5 5.5,13 10.7,13 9.5,21.5 18.5,11 13.2,11" fill="#ffffff" />
+        </svg>
         <div
           style={{
-            width: '100%',
-            height: '100%',
-            borderRadius: 52,
-            background: '#0b0d1d',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            position: 'absolute',
+            right: 0,
+            bottom: 0,
+            width: 72,
+            height: 72,
+            borderBottomRightRadius: 56,
+            background: '#ff5500',
           }}
-        >
-          <svg width="160" height="160" viewBox="0 0 24 24">
-            <polygon points="13.5,2 5,13.2 10.6,13.2 9.5,22 19,10.4 13.2,10.4" fill="#A78BFA" />
-          </svg>
-        </div>
+        />
       </div>
     ),
     {

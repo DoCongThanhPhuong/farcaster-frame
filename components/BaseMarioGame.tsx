@@ -1,19 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback, type PointerEvent } from 'react';
-import { shareCast } from './ShareCastCard';
 import {
   Play,
   RotateCcw,
   Share2,
-  Trophy,
   Volume2,
   VolumeX,
   ArrowLeft,
   ArrowRight,
   ArrowUp,
   Heart,
-  Skull,
   HelpCircle,
   X,
   Lock,
@@ -23,7 +20,10 @@ import {
   Flag,
   Zap,
   Clock,
+  Trophy,
+  Skull,
 } from 'lucide-react';
+import { shareCast } from './ShareCastCard';
 import { LEVELS, POINTS, dailyLevel, dailyNumber, type PlatformType } from '@/lib/levels';
 import { formatUtcCountdown, I18N, type DeathCause, type Locale } from '@/lib/i18n';
 
@@ -94,9 +94,9 @@ const audio = new RetroAudio();
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 280;
 
-const STARS = Array.from({ length: 28 }, (_, i) => ({
+const STARS = Array.from({ length: 24 }, (_, i) => ({
   x: (i * 97 + 23) % CANVAS_WIDTH,
-  y: (i * 43 + 13) % 145,
+  y: (i * 43 + 13) % 140,
   r: i % 4 === 0 ? 1.5 : 1,
   phase: i * 0.7,
 }));
@@ -148,38 +148,31 @@ function setupHiDpiCanvas(canvas: HTMLCanvasElement): CanvasRenderingContext2D |
 
 function drawBackdrop(ctx: CanvasRenderingContext2D, cameraX: number, tick: number, reducedMotion: boolean) {
   const sky = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
-  sky.addColorStop(0, '#060713');
-  sky.addColorStop(0.55, '#10132e');
-  sky.addColorStop(1, '#1d1542');
+  sky.addColorStop(0, '#0a0d12');
+  sky.addColorStop(0.6, '#101620');
+  sky.addColorStop(1, '#162030');
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  // Cyber planet / moon
-  const moonX = 392 - (cameraX * 0.04) % 80;
-  const moonGlow = ctx.createRadialGradient(moonX, 52, 6, moonX, 52, 46);
-  moonGlow.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
-  moonGlow.addColorStop(0.5, 'rgba(124, 58, 237, 0.14)');
-  moonGlow.addColorStop(1, 'rgba(124, 58, 237, 0)');
-  ctx.fillStyle = moonGlow;
+  // Base Cobalt orbital beacon
+  const moonX = 396 - (cameraX * 0.04) % 80;
+  ctx.fillStyle = 'rgba(0, 82, 255, 0.14)';
   ctx.beginPath();
-  ctx.arc(moonX, 52, 46, 0, Math.PI * 2);
+  ctx.arc(moonX, 50, 34, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#38BDF8';
-  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = 'rgba(59, 130, 246, 0.25)';
   ctx.beginPath();
-  ctx.arc(moonX, 52, 18, 0, Math.PI * 2);
+  ctx.arc(moonX, 50, 16, 0, Math.PI * 2);
   ctx.fill();
-  ctx.globalAlpha = 1;
 
-  // Starfield
   for (const s of STARS) {
-    const alpha = reducedMotion ? 0.55 : 0.3 + 0.45 * Math.abs(Math.sin(tick * 0.03 + s.phase));
-    ctx.fillStyle = `rgba(226, 232, 240, ${alpha.toFixed(2)})`;
+    const alpha = reducedMotion ? 0.45 : 0.25 + 0.4 * Math.abs(Math.sin(tick * 0.03 + s.phase));
+    ctx.fillStyle = `rgba(203, 213, 225, ${alpha.toFixed(2)})`;
     ctx.fillRect(s.x, s.y, s.r, s.r);
   }
 
-  // Far skyline (0.18x parallax)
+  // Far industrial skyline
   const skyShift = (cameraX * 0.18) % SKYLINE_SPAN;
   for (let rep = -1; rep <= 2; rep++) {
     const base = rep * SKYLINE_SPAN - skyShift;
@@ -187,13 +180,13 @@ function drawBackdrop(ctx: CanvasRenderingContext2D, cameraX: number, tick: numb
       const bx = base + b.x;
       if (bx + b.w < -10 || bx > CANVAS_WIDTH + 10) continue;
       const by = 240 - b.h;
-      ctx.fillStyle = '#0c1026';
+      ctx.fillStyle = '#0e131b';
       ctx.fillRect(bx, by, b.w, b.h);
-      ctx.strokeStyle = 'rgba(99, 102, 241, 0.22)';
+      ctx.strokeStyle = 'rgba(54, 61, 74, 0.5)';
       ctx.strokeRect(bx + 0.5, by + 0.5, b.w - 1, b.h - 1);
 
       if (b.win) {
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
+        ctx.fillStyle = 'rgba(96, 165, 250, 0.16)';
         for (let wy = by + 10; wy < 232; wy += 14) {
           ctx.fillRect(bx + 6, wy, 5, 4);
           if (b.w > 36) ctx.fillRect(bx + b.w - 12, wy, 5, 4);
@@ -202,18 +195,18 @@ function drawBackdrop(ctx: CanvasRenderingContext2D, cameraX: number, tick: numb
     }
   }
 
-  // Midground synthwave ridges (0.38x parallax)
+  // Midground slate ridges
   const ridgeShift = (cameraX * 0.38) % 240;
-  ctx.fillStyle = '#131636';
-  ctx.strokeStyle = 'rgba(167, 139, 250, 0.28)';
+  ctx.fillStyle = '#141c27';
+  ctx.strokeStyle = 'rgba(59, 130, 246, 0.22)';
   ctx.lineWidth = 1.2;
   ctx.beginPath();
   ctx.moveTo(-20, 242);
   for (let rx = -240; rx <= CANVAS_WIDTH + 240; rx += 120) {
     const px = rx - ridgeShift;
-    ctx.lineTo(px + 40, 198);
+    ctx.lineTo(px + 40, 200);
     ctx.lineTo(px + 85, 218);
-    ctx.lineTo(px + 120, 190);
+    ctx.lineTo(px + 120, 192);
   }
   ctx.lineTo(CANVAS_WIDTH + 20, 242);
   ctx.closePath();
@@ -238,7 +231,7 @@ function drawRunner(
   ctx.translate(x, y);
 
   if (invulnerable > 0) {
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.7)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.arc(w / 2, 13, 17, 0, Math.PI * 2);
@@ -251,10 +244,10 @@ function drawRunner(
     ctx.scale(-1, 1);
   }
 
-  // Flowing neon scarf
+  // Signal Orange scarf
   const moving = Math.abs(vx) > 0.4 || !grounded;
   const wave = moving ? Math.sin(animTick * 1.8) * 2.5 : 0;
-  ctx.fillStyle = '#F43F5E';
+  ctx.fillStyle = '#FF5500';
   ctx.beginPath();
   ctx.moveTo(4, 11);
   ctx.lineTo(-6 - (moving ? 3 : 0), 13 + wave);
@@ -263,22 +256,22 @@ function drawRunner(
   ctx.closePath();
   ctx.fill();
 
-  // Helmet & crest
-  ctx.fillStyle = '#7C3AED';
+  // White/slate tactical helmet
+  ctx.fillStyle = '#F3F4F6';
   ctx.fillRect(3, 0, 14, 4);
-  ctx.fillStyle = '#1E1B4B';
+  ctx.fillStyle = '#1E293B';
   ctx.fillRect(2, 3, 16, 9);
 
-  // Glowing cyan visor
+  // Cyan-blue visor
   ctx.fillStyle = '#38BDF8';
   ctx.fillRect(9, 5, 8, 4);
   ctx.fillStyle = '#E0F2FE';
   ctx.fillRect(13, 6, 3, 2);
 
-  // Suit torso
-  ctx.fillStyle = '#2563EB';
+  // Base Cobalt suit torso
+  ctx.fillStyle = '#0052FF';
   ctx.fillRect(3, 12, 14, 9);
-  ctx.fillStyle = '#A78BFA';
+  ctx.fillStyle = '#93C5FD';
   ctx.fillRect(7, 14, 6, 5);
 
   // Boots
@@ -301,6 +294,7 @@ function drawRunner(
 
 export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }: BaseMarioGameProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const guideRef = useRef<HTMLDialogElement | null>(null);
   const cleanupLoopRef = useRef<(() => void) | null>(null);
   const localeRef = useRef<Locale>(locale);
   localeRef.current = locale;
@@ -313,7 +307,6 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [lives, setLives] = useState(5);
   const [progressPct, setProgressPct] = useState(0);
-  const [showGuide, setShowGuide] = useState(false);
   const [levelIndex, setLevelIndex] = useState(0);
   const [unlockedLevel, setUnlockedLevel] = useState(0);
   const [dailyDay, setDailyDay] = useState<number | null>(null);
@@ -380,7 +373,6 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
     } catch {}
   }, [fid, onHighScoreChange, unlockedKey]);
 
-  // Paint a crisp static preview scene when idle so the arcade screen looks alive before pressing Start.
   useEffect(() => {
     if (gameState !== 'idle') return;
     const canvas = canvasRef.current;
@@ -389,11 +381,11 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
     if (!ctx) return;
 
     drawBackdrop(ctx, 0, 12, true);
-    ctx.fillStyle = '#0c1024';
+    ctx.fillStyle = '#0d1117';
     ctx.fillRect(0, 240, CANVAS_WIDTH, 40);
-    ctx.fillStyle = '#0EA5E9';
-    ctx.fillRect(0, 240, CANVAS_WIDTH, 4);
-    ctx.fillStyle = '#38BDF8';
+    ctx.fillStyle = '#0052FF';
+    ctx.fillRect(0, 240, CANVAS_WIDTH, 5);
+    ctx.fillStyle = '#60A5FA';
     ctx.fillRect(0, 240, CANVAS_WIDTH, 1.5);
     drawRunner(ctx, 72, 214, 20, 'right', true, 0, 0, 0, 0);
   }, [gameState]);
@@ -685,9 +677,9 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
                   p.x + p.w / 2,
                   p.y - 12,
                   p.type === 'hollow_column' ? tr.floatHollow : tr.floatRug,
-                  '#F43F5E'
+                  '#EF4444'
                 );
-                spawnParticles(p.x + p.w / 2, p.y + p.h / 2, '#F43F5E', 10);
+                spawnParticles(p.x + p.w / 2, p.y + p.h / 2, '#FF5500', 10);
               }
             } else if (p.falling) {
               p.fallSpeed = (p.fallSpeed || 2) + 0.6;
@@ -706,8 +698,8 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
           audio.powerUp();
           stateRef.current.score += POINTS.question;
           setScore(stateRef.current.score);
-          spawnFloatingText(p.x + p.w / 2, p.y - 12, `+${POINTS.question}`, '#A78BFA');
-          spawnParticles(p.x + p.w / 2, p.y, '#FBBF24', 10);
+          spawnFloatingText(p.x + p.w / 2, p.y - 12, `+${POINTS.question}`, '#FBBF24');
+          spawnParticles(p.x + p.w / 2, p.y, '#F59E0B', 10);
           return true;
         };
 
@@ -742,7 +734,7 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
 
               if (!hitQuestion(p) && p.type === 'brick') {
                 audio.stomp();
-                spawnParticles(p.x + p.w / 2, p.y + p.h, '#818CF8', 4);
+                spawnParticles(p.x + p.w / 2, p.y + p.h, '#94A3B8', 4);
               }
             }
           }
@@ -760,8 +752,8 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
               audio.bonk();
               triggerShake(10, 4);
               pendingCause = tb.gas ? 'gas' : 'invisible';
-              spawnFloatingText(tb.x + tb.w / 2, tb.y - 12, tr.floatTrap, '#F43F5E');
-              spawnParticles(tb.x + tb.w / 2, tb.y + tb.h / 2, '#F43F5E', 12);
+              spawnFloatingText(tb.x + tb.w / 2, tb.y - 12, tr.floatTrap, '#EF4444');
+              spawnParticles(tb.x + tb.w / 2, tb.y + tb.h / 2, '#EF4444', 12);
               player.y = tb.y + tb.h;
               player.vy = 5;
               player.vx = 0;
@@ -803,8 +795,8 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
                 pendingCause = 'scam';
                 stateRef.current.score = Math.max(0, stateRef.current.score - POINTS.fakePenalty);
                 setScore(stateRef.current.score);
-                spawnFloatingText(coin.x, coin.y - 14, tr.floatScam(POINTS.fakePenalty), '#F43F5E');
-                spawnParticles(coin.x, coin.y, '#F43F5E', 14);
+                spawnFloatingText(coin.x, coin.y - 14, tr.floatScam(POINTS.fakePenalty), '#EF4444');
+                spawnParticles(coin.x, coin.y, '#EF4444', 14);
                 player.vx = player.facing === 'right' ? -8 : 8;
                 player.vy = -6;
               } else {
@@ -816,12 +808,12 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
                   coin.x,
                   coin.y - 10,
                   `+${gain}`,
-                  coin.type === 'farcaster' ? '#D8B4FE' : '#7DD3FC'
+                  coin.type === 'farcaster' ? '#FDBA74' : '#93C5FD'
                 );
                 spawnParticles(
                   coin.x,
                   coin.y,
-                  coin.type === 'farcaster' ? '#A855F7' : '#38BDF8',
+                  coin.type === 'farcaster' ? '#FF5500' : '#3B82F6',
                   8
                 );
               }
@@ -850,7 +842,7 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
                 stateRef.current.score += POINTS.stomp;
                 setScore(stateRef.current.score);
                 spawnFloatingText(enemy.x + 10, enemy.y - 10, tr.floatStomp(POINTS.stomp), '#34D399');
-                spawnParticles(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#F43F5E', 12);
+                spawnParticles(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#EF4444', 12);
               } else if (player.invulnerable <= 0) {
                 recordDeath('fud');
                 if (stateRef.current.gameState !== 'playing') return;
@@ -873,7 +865,7 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
           setScore(stateRef.current.score);
           setProgressPct(100);
           spawnFloatingText(flag.x, flag.y - 6, tr.floatGoal(POINTS.flag), '#FBBF24');
-          spawnParticles(flag.x + 4, flag.y + 24, '#38BDF8', 18);
+          spawnParticles(flag.x + 4, flag.y + 24, '#3B82F6', 18);
           victoryTimer = setTimeout(() => {
             endGame('victory');
           }, 750);
@@ -911,11 +903,10 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
           if (p.x + p.w < cameraX - 24 || p.x > cameraX + CANVAS_WIDTH + 24) continue;
 
           if (p.type === 'ground') {
-            ctx.fillStyle = '#0b0f22';
+            ctx.fillStyle = '#0d1117';
             ctx.fillRect(p.x, p.y, p.w, p.h);
 
-            // Tech deck grid ticks
-            ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
+            ctx.strokeStyle = 'rgba(59, 130, 246, 0.1)';
             ctx.beginPath();
             for (let gx = p.x + 24; gx < p.x + p.w; gx += 28) {
               ctx.moveTo(gx, p.y + 6);
@@ -923,24 +914,22 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
             }
             ctx.stroke();
 
-            // Glowing Base top rail
-            ctx.fillStyle = '#0284C7';
+            ctx.fillStyle = '#0052FF';
             ctx.fillRect(p.x, p.y, p.w, 6);
-            ctx.fillStyle = '#38BDF8';
-            ctx.fillRect(p.x, p.y, p.w, 2);
+            ctx.fillStyle = '#60A5FA';
+            ctx.fillRect(p.x, p.y, p.w, 1.5);
 
-            // Side edge highlights on pit borders
-            ctx.fillStyle = '#1E293B';
+            ctx.fillStyle = '#1f2937';
             ctx.fillRect(p.x, p.y + 6, 2, p.h - 6);
             ctx.fillRect(p.x + p.w - 2, p.y + 6, 2, p.h - 6);
           } else if (p.type === 'rugpull') {
             const jitterX = p.shake && !reducedMotion ? (Math.random() - 0.5) * 5 : 0;
             const danger = Boolean(p.falling || p.shake);
-            ctx.fillStyle = danger ? '#BE123C' : '#5B21B6';
+            ctx.fillStyle = danger ? '#B91C1C' : '#334155';
             ctx.fillRect(p.x + jitterX, p.y, p.w, p.h);
-            ctx.fillStyle = danger ? '#FB7185' : '#A78BFA';
+            ctx.fillStyle = danger ? '#FF5500' : '#F59E0B';
             ctx.fillRect(p.x + jitterX, p.y, p.w, 3);
-            ctx.strokeStyle = danger ? '#F43F5E' : '#7C3AED';
+            ctx.strokeStyle = danger ? '#EF4444' : '#64748B';
             ctx.strokeRect(p.x + jitterX + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
 
             ctx.fillStyle = '#FFFFFF';
@@ -955,15 +944,13 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
             const jitterX = p.shake && !reducedMotion ? (Math.random() - 0.5) * 4 : 0;
             const px = p.x + jitterX;
             const warn = Boolean(p.falling || p.shake);
-            ctx.fillStyle = warn ? '#9F1239' : '#065F46';
+            ctx.fillStyle = warn ? '#991B1B' : '#065F46';
             ctx.fillRect(px, p.y + 9, p.w, p.h - 9);
-            // Specular highlight bar
-            ctx.fillStyle = warn ? '#FB7185' : '#34D399';
+            ctx.fillStyle = warn ? '#F87171' : '#34D399';
             ctx.fillRect(px + 5, p.y + 9, 5, p.h - 9);
-            // Rim cap
-            ctx.fillStyle = warn ? '#E11D48' : '#10B981';
+            ctx.fillStyle = warn ? '#DC2626' : '#10B981';
             ctx.fillRect(px - 3, p.y, p.w + 6, 10);
-            ctx.strokeStyle = warn ? '#FDA4AF' : '#6EE7B7';
+            ctx.strokeStyle = warn ? '#FCA5A5' : '#6EE7B7';
             ctx.strokeRect(px - 2.5, p.y + 0.5, p.w + 5, 9);
           } else if (p.type === 'question') {
             if (p.hit) {
@@ -981,31 +968,30 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
               ctx.fillRect(p.x + 2, p.y + 2, p.w - 4, 3);
               ctx.strokeStyle = '#B45309';
               ctx.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
-              ctx.fillStyle = '#1E1B4B';
+              ctx.fillStyle = '#0F172A';
               ctx.font = '900 13px monospace';
               ctx.textAlign = 'center';
               ctx.fillText('?', p.x + p.w / 2, p.y + p.h / 2 + 5);
             }
           } else if (p.type === 'brick') {
-            ctx.fillStyle = '#312E81';
+            ctx.fillStyle = '#263040';
             ctx.fillRect(p.x, p.y, p.w, p.h);
-            ctx.fillStyle = '#6366F1';
+            ctx.fillStyle = '#475569';
             ctx.fillRect(p.x + 1, p.y + 1, p.w - 2, 3);
-            ctx.strokeStyle = '#4338CA';
+            ctx.strokeStyle = '#334155';
             ctx.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
-            // Rivets
-            ctx.fillStyle = '#A5B4FC';
+            ctx.fillStyle = '#94A3B8';
             ctx.fillRect(p.x + 3, p.y + 4, 2, 2);
             ctx.fillRect(p.x + p.w - 5, p.y + 4, 2, 2);
           }
         }
 
-        // Revealed hidden trap blocks (vector hazard box, no emoji)
+        // Revealed hidden trap blocks
         for (const tb of trollBlocks) {
           if (tb.revealed && tb.x > cameraX - 24 && tb.x < cameraX + CANVAS_WIDTH + 24) {
             ctx.fillStyle = '#7F1D1D';
             ctx.fillRect(tb.x, tb.y, tb.w, tb.h);
-            ctx.strokeStyle = '#F43F5E';
+            ctx.strokeStyle = '#EF4444';
             ctx.lineWidth = 1.5;
             ctx.strokeRect(tb.x + 0.5, tb.y + 0.5, tb.w - 1, tb.h - 1);
             ctx.beginPath();
@@ -1018,7 +1004,7 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
           }
         }
 
-        // Collectibles (vector orbs/gems, no emoji)
+        // Collectibles
         for (const coin of coins) {
           if (!coin.collected && coin.x > cameraX - 24 && coin.x < cameraX + CANVAS_WIDTH + 24) {
             const bounce = reducedMotion ? 0 : Math.sin(coin.tick * 0.1) * 2.8;
@@ -1026,7 +1012,7 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
             ctx.translate(coin.x, coin.y + bounce);
 
             if (coin.type === 'fake_airdrop') {
-              ctx.fillStyle = 'rgba(244, 63, 94, 0.24)';
+              ctx.fillStyle = 'rgba(239, 68, 68, 0.24)';
               ctx.beginPath();
               ctx.arc(0, 0, 13, 0, Math.PI * 2);
               ctx.fill();
@@ -1035,23 +1021,23 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
               ctx.beginPath();
               ctx.arc(0, 0, 10, 0, Math.PI * 2);
               ctx.fill();
-              ctx.strokeStyle = '#F43F5E';
+              ctx.strokeStyle = '#EF4444';
               ctx.lineWidth = 2;
               ctx.stroke();
               ctx.lineWidth = 1;
 
-              ctx.fillStyle = '#1E1B4B';
+              ctx.fillStyle = '#0F172A';
               ctx.font = 'bold 7.5px monospace';
               ctx.textAlign = 'center';
               ctx.fillText('10K', 0, 2.8);
             } else if (coin.type === 'farcaster') {
-              // Violet diamond gem
-              ctx.fillStyle = 'rgba(168, 85, 247, 0.25)';
+              // Signal Orange diamond crystal
+              ctx.fillStyle = 'rgba(255, 85, 0, 0.22)';
               ctx.beginPath();
               ctx.arc(0, 0, 12, 0, Math.PI * 2);
               ctx.fill();
 
-              ctx.fillStyle = '#9333EA';
+              ctx.fillStyle = '#FF5500';
               ctx.beginPath();
               ctx.moveTo(0, -10);
               ctx.lineTo(9, 0);
@@ -1060,7 +1046,7 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
               ctx.closePath();
               ctx.fill();
 
-              ctx.fillStyle = '#E9D5FF';
+              ctx.fillStyle = '#FED7AA';
               ctx.beginPath();
               ctx.moveTo(0, -5);
               ctx.lineTo(4.5, 0);
@@ -1069,18 +1055,18 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
               ctx.closePath();
               ctx.fill();
             } else {
-              // Base cyber orb
-              ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
+              // Base Cobalt orb
+              ctx.fillStyle = 'rgba(0, 82, 255, 0.24)';
               ctx.beginPath();
               ctx.arc(0, 0, 11, 0, Math.PI * 2);
               ctx.fill();
 
-              ctx.fillStyle = '#0284C7';
+              ctx.fillStyle = '#0052FF';
               ctx.beginPath();
               ctx.arc(0, 0, 8, 0, Math.PI * 2);
               ctx.fill();
 
-              ctx.strokeStyle = '#E0F2FE';
+              ctx.strokeStyle = '#FFFFFF';
               ctx.lineWidth = 2;
               ctx.beginPath();
               ctx.arc(0, 0, 4, 0, Math.PI * 2);
@@ -1098,7 +1084,6 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
             const ey = enemy.y;
             const dir = enemy.vx >= 0 ? 1 : -1;
 
-            // Horns
             ctx.fillStyle = '#FCA5A5';
             ctx.beginPath();
             ctx.moveTo(ex + 2, ey + 5);
@@ -1109,7 +1094,6 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
             ctx.lineTo(ex + enemy.w - 6, ey + 3);
             ctx.fill();
 
-            // Body dome
             ctx.fillStyle = '#DC2626';
             ctx.beginPath();
             ctx.arc(ex + enemy.w / 2, ey + 9, 10, Math.PI, 0);
@@ -1118,14 +1102,12 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
             ctx.closePath();
             ctx.fill();
 
-            // Dark visor + glowing eyes
-            ctx.fillStyle = '#1E1B4B';
+            ctx.fillStyle = '#0F172A';
             ctx.fillRect(ex + 2, ey + 5, enemy.w - 4, 6);
             ctx.fillStyle = '#FDE047';
             ctx.fillRect(ex + 4 + dir, ey + 6.5, 3.5, 3);
             ctx.fillRect(ex + 12 + dir, ey + 6.5, 3.5, 3);
 
-            // Treads
             const step = reducedMotion ? 0 : Math.sin(worldTick * 0.3) * 1.5;
             ctx.fillStyle = '#7F1D1D';
             ctx.fillRect(ex + 1, ey + enemy.h - 3, 7, 3);
@@ -1139,19 +1121,17 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
         }
 
         // Goal Beacon Flagpole
-        const beaconColor = flag.flees > 0 ? '#F43F5E' : '#38BDF8';
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
+        const beaconColor = flag.flees > 0 ? '#FF5500' : '#0052FF';
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.14)';
         ctx.fillRect(flag.x - 2, flag.y, flag.w + 4, flag.h);
         ctx.fillStyle = '#CBD5E1';
         ctx.fillRect(flag.x + 2, flag.y, 4, flag.h);
 
-        // Apex orb
-        ctx.fillStyle = '#FBBF24';
+        ctx.fillStyle = '#F59E0B';
         ctx.beginPath();
         ctx.arc(flag.x + 4, flag.y, 6.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Neon pennant
         const flutter = reducedMotion ? 0 : Math.sin(worldTick * 0.15) * 3;
         ctx.fillStyle = beaconColor;
         ctx.beginPath();
@@ -1161,7 +1141,6 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
         ctx.closePath();
         ctx.fill();
 
-        // Runner
         if (player.invulnerable % 8 < 5) {
           drawRunner(
             ctx,
@@ -1177,7 +1156,6 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
           );
         }
 
-        // Particles
         for (let i = particles.length - 1; i >= 0; i--) {
           const pt = particles[i];
           pt.x += pt.vx;
@@ -1190,7 +1168,6 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
         }
         ctx.globalAlpha = 1;
 
-        // Floating combat text
         for (let i = floatingTexts.length - 1; i >= 0; i--) {
           const ft = floatingTexts[i];
           ft.y -= 0.75;
@@ -1198,7 +1175,7 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
           ctx.globalAlpha = Math.min(1, ft.life / 14);
           ctx.font = 'bold 11px ui-sans-serif, system-ui, sans-serif';
           ctx.textAlign = 'center';
-          ctx.strokeStyle = 'rgba(7, 8, 18, 0.85)';
+          ctx.strokeStyle = 'rgba(10, 13, 18, 0.9)';
           ctx.lineWidth = 3;
           ctx.strokeText(ft.text, ft.x, ft.y);
           ctx.fillStyle = ft.color;
@@ -1236,10 +1213,6 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Escape' && showGuide) {
-        setShowGuide(false);
-        return;
-      }
       if (e.code === 'KeyR' && stateRef.current.gameState === 'playing') {
         startGame(dailyDay !== null ? 'daily' : levelIndex);
         return;
@@ -1264,7 +1237,7 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [dailyDay, levelIndex, showGuide, startGame]);
+  }, [dailyDay, levelIndex, startGame]);
 
   const handleSelectMode = (target: number | 'daily') => {
     if (target === 'daily') {
@@ -1300,46 +1273,52 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
   };
 
   return (
-    <section className="arcade-cabinet rounded-2xl p-3.5 sm:p-4 relative overflow-hidden">
-      {/* Top Mode Selector & Utility Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-[var(--border-subtle)]">
-        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t.modeCampaign}>
-          {LEVELS.map((lv, i) => {
-            const locked = i > unlockedLevel;
-            const selected = dailyDay === null && i === levelIndex;
-            const localName = t.levelNames[i] ?? lv.name;
-            return (
-              <button
-                key={lv.name}
-                type="button"
-                onClick={() => handleSelectMode(i)}
-                disabled={locked}
-                aria-pressed={selected}
-                title={locked ? t.levelLockedHint : localName}
-                className={`min-h-[36px] px-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-colors ${
-                  selected
-                    ? 'bg-violet-600 border-violet-400/70 text-white shadow-sm shadow-violet-950/60'
-                    : locked
-                    ? 'bg-[#0d0f1e] border-[#1c203d] text-slate-600 cursor-not-allowed'
-                    : 'bg-[#12152a] border-[var(--border-subtle)] text-slate-300 hover:text-white hover:bg-[#191d38]'
-                }`}
-              >
-                {locked && <Lock className="w-3 h-3" aria-hidden="true" />}
-                <span>{`${i + 1}`}</span>
-                <span className="hidden md:inline text-[11px] font-medium opacity-90">{localName}</span>
-              </button>
-            );
-          })}
+    <section className="bg-surface border border-line rounded-xl p-3 sm:p-4">
+      {/* Console Top Bar: Stage Tabs + Hardware Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-line">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <div
+            role="group"
+            aria-label={t.modeCampaign}
+            className="flex items-center rounded-lg bg-canvas border border-line p-0.5"
+          >
+            {LEVELS.map((lv, i) => {
+              const locked = i > unlockedLevel;
+              const selected = dailyDay === null && i === levelIndex;
+              const localName = t.levelNames[i] ?? lv.name;
+              return (
+                <button
+                  key={lv.name}
+                  type="button"
+                  onClick={() => handleSelectMode(i)}
+                  disabled={locked}
+                  aria-pressed={selected}
+                  title={locked ? t.levelLockedHint : localName}
+                  className={`min-h-[32px] px-2.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                    selected
+                      ? 'bg-brand text-white'
+                      : locked
+                      ? 'text-ink-muted/45 cursor-not-allowed'
+                      : 'text-ink-secondary hover:text-ink'
+                  }`}
+                >
+                  {locked && <Lock className="w-3 h-3" aria-hidden="true" />}
+                  <span>{`${i + 1}`}</span>
+                  <span className="hidden sm:inline text-xs">{localName}</span>
+                </button>
+              );
+            })}
+          </div>
 
           <button
             type="button"
             onClick={() => handleSelectMode('daily')}
             aria-pressed={dailyDay !== null}
             title={t.dailySameMap}
-            className={`min-h-[36px] px-3 rounded-xl text-xs font-extrabold flex items-center gap-1.5 border transition-colors ${
+            className={`min-h-[36px] px-3 rounded-lg text-xs font-bold flex items-center gap-1.5 border transition-colors ${
               dailyDay !== null
-                ? 'bg-amber-400 border-amber-300 text-slate-950 shadow-sm shadow-amber-950/50'
-                : 'bg-amber-950/30 border-amber-500/40 text-amber-300 hover:bg-amber-900/40'
+                ? 'bg-gold border-gold text-canvas'
+                : 'bg-canvas border-gold/40 text-gold hover:bg-gold/10'
             }`}
           >
             <CalendarDays className="w-3.5 h-3.5" aria-hidden="true" />
@@ -1354,9 +1333,9 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
               onClick={() => startGame(dailyDay !== null ? 'daily' : levelIndex)}
               aria-label={t.restartBtn}
               title={t.restartBtn}
-              className="min-w-[36px] min-h-[36px] px-2.5 rounded-xl bg-[#12152a] hover:bg-[#191d38] border border-[var(--border-subtle)] text-slate-300 hover:text-white transition-colors flex items-center justify-center"
+              className="w-8 h-8 rounded-lg bg-elevated hover:bg-elevated-hover border border-line-strong text-ink-secondary hover:text-ink transition-colors flex items-center justify-center"
             >
-              <RotateCcw className="w-4 h-4" aria-hidden="true" />
+              <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           )}
           <button
@@ -1365,116 +1344,114 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
             aria-label={soundEnabled ? t.muteBtn : t.unmuteBtn}
             aria-pressed={soundEnabled}
             title={soundEnabled ? t.muteBtn : t.unmuteBtn}
-            className="min-w-[36px] min-h-[36px] px-2.5 rounded-xl bg-[#12152a] hover:bg-[#191d38] border border-[var(--border-subtle)] text-slate-300 hover:text-white transition-colors flex items-center justify-center"
+            className="w-8 h-8 rounded-lg bg-elevated hover:bg-elevated-hover border border-line-strong text-ink-secondary hover:text-ink transition-colors flex items-center justify-center"
           >
             {soundEnabled ? (
-              <Volume2 className="w-4 h-4 text-sky-400" aria-hidden="true" />
+              <Volume2 className="w-3.5 h-3.5 text-brand-bright" aria-hidden="true" />
             ) : (
-              <VolumeX className="w-4 h-4 text-slate-500" aria-hidden="true" />
+              <VolumeX className="w-3.5 h-3.5 text-ink-muted" aria-hidden="true" />
             )}
           </button>
           <button
             type="button"
-            onClick={() => setShowGuide(true)}
+            onClick={() => guideRef.current?.showModal()}
             aria-label={t.guideBtn}
-            className="min-h-[36px] px-2.5 rounded-xl bg-[#12152a] hover:bg-[#191d38] border border-[var(--border-subtle)] text-slate-200 hover:text-white transition-colors flex items-center gap-1.5 text-xs font-semibold"
+            className="h-8 px-2.5 rounded-lg bg-elevated hover:bg-elevated-hover border border-line-strong text-ink transition-colors flex items-center gap-1.5 text-xs font-medium"
           >
-            <HelpCircle className="w-4 h-4 text-violet-400" aria-hidden="true" />
+            <HelpCircle className="w-3.5 h-3.5 text-ink-secondary" aria-hidden="true" />
             <span className="hidden sm:inline">{t.guideBtn}</span>
           </button>
         </div>
       </div>
 
-      {/* Telemetry HUD Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5 px-0.5 text-xs">
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1" aria-label={`${t.lives}: ${lives}`}>
+      {/* Recessed Digital Telemetry Readout */}
+      <div className="rounded-lg bg-canvas border border-line px-3 py-2 mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-1 shrink-0" aria-label={`${t.lives}: ${lives}`}>
             {Array.from({ length: 5 }).map((_, i) => (
               <Heart
                 key={i}
                 aria-hidden="true"
-                className={`w-4 h-4 transition-colors ${
-                  i < lives ? 'text-rose-500 fill-rose-500' : 'text-slate-700'
+                className={`w-3.5 h-3.5 transition-colors ${
+                  i < lives ? 'text-danger fill-danger' : 'text-line-strong'
                 }`}
               />
             ))}
           </div>
-          <span className="text-slate-300 font-semibold truncate max-w-[180px]">{stageTitle}</span>
+
+          <div className="hidden sm:flex items-center gap-2 min-w-0">
+            <span className="w-px h-3.5 bg-line" aria-hidden="true" />
+            <div className="w-20 h-1.5 rounded-full bg-elevated overflow-hidden">
+              <div
+                className="h-full bg-brand-bright transition-[width] duration-150"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <span className="tabular-nums text-[11px] text-ink-muted">{progressPct}%</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 tabular-nums">
-          <div className="px-2.5 py-1 rounded-lg bg-[#0c0e1d] border border-[#1f2447] text-slate-300">
-            <span className="text-[11px] text-slate-400 mr-1">{t.score}</span>
-            <strong className="text-white font-extrabold">{score}</strong>
+        <div className="flex items-center gap-3 tabular-nums">
+          <div>
+            <span className="text-[11px] text-ink-muted mr-1.5">{t.score}</span>
+            <strong className="text-ink font-bold">{score}</strong>
           </div>
-          <div
-            className="px-2 py-1 rounded-lg bg-amber-950/35 border border-amber-500/30 text-amber-300 font-bold flex items-center gap-1"
-            title={`${t.best}: ${highScore}`}
-          >
-            <Trophy className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>{highScore}</span>
+          <span className="w-px h-3.5 bg-line" aria-hidden="true" />
+          <div className="flex items-center gap-1" title={`${t.best}: ${highScore}`}>
+            <Trophy className="w-3.5 h-3.5 text-gold" aria-hidden="true" />
+            <span className="text-ink font-semibold">{highScore}</span>
           </div>
-          <div
-            className="px-2 py-1 rounded-lg bg-rose-950/35 border border-rose-500/30 text-rose-300 font-bold flex items-center gap-1"
-            title={`${t.deaths}: ${deaths}`}
-          >
-            <Skull className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>{deaths}</span>
+          <span className="w-px h-3.5 bg-line" aria-hidden="true" />
+          <div className="flex items-center gap-1" title={`${t.deaths}: ${deaths}`}>
+            <Skull className="w-3.5 h-3.5 text-ink-muted" aria-hidden="true" />
+            <span className="text-ink-secondary font-semibold">{deaths}</span>
           </div>
         </div>
       </div>
 
-      {/* Stage Distance Progress Bar */}
-      <div className="w-full h-1.5 rounded-full bg-[#0b0d1b] overflow-hidden mb-2.5 border border-[#1d2140]">
-        <div
-          className="h-full bg-gradient-to-r from-sky-400 via-violet-500 to-rose-500 transition-[width] duration-150"
-          style={{ width: `${progressPct}%` }}
-        />
-      </div>
-
-      {/* Arcade Screen Viewport */}
-      <div className="arcade-screen-bezel relative w-full rounded-xl overflow-hidden border border-[#2b3160] bg-[#060713] aspect-[480/280]">
+      {/* Screen Viewport */}
+      <div className="relative w-full rounded-lg overflow-hidden border border-line-strong bg-canvas aspect-[480/280]">
         <canvas ref={canvasRef} width={480} height={280} className="w-full h-full block" />
 
         {gameState === 'idle' && (
-          <div className="absolute inset-0 bg-[#070814]/82 backdrop-blur-[3px] flex flex-col items-center justify-center p-4 text-center">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-widest bg-rose-500/15 text-rose-300 border border-rose-500/35 mb-2">
+          <div className="absolute inset-0 bg-canvas/85 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-widest bg-signal/15 text-signal border border-signal/30 mb-2">
               <Zap className="w-3 h-3" aria-hidden="true" />
               {t.idleTag}
             </span>
 
-            <h1 className="font-extrabold text-white text-lg sm:text-xl tracking-tight mb-1">
+            <h1 className="font-extrabold text-ink text-lg sm:text-2xl tracking-tight mb-1">
               {stageTitle}
             </h1>
 
-            <p className="text-xs text-slate-300 max-w-sm mb-3.5 line-clamp-2 sm:line-clamp-none">
+            <p className="text-xs text-ink-secondary max-w-sm mb-4 line-clamp-2 sm:line-clamp-none leading-relaxed">
               {t.idleDesc}
             </p>
 
-            <div className="flex flex-wrap items-center justify-center gap-2.5">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <button
                 type="button"
                 onClick={() => startGame(dailyDay !== null ? 'daily' : levelIndex)}
-                className="min-h-[44px] px-6 rounded-xl bg-gradient-to-r from-rose-500 via-violet-600 to-indigo-600 hover:opacity-95 text-white font-extrabold text-xs tracking-wide flex items-center gap-2 shadow-lg shadow-violet-950/60 transition-opacity"
+                className="min-h-[42px] px-5 rounded-lg bg-signal hover:bg-signal-hover border border-[#c23b00] border-b-[3px] text-white font-bold text-xs tracking-wide flex items-center gap-2 transition-colors"
               >
-                <Play className="w-4 h-4 fill-white" aria-hidden="true" />
+                <Play className="w-3.5 h-3.5 fill-white" aria-hidden="true" />
                 <span>{dailyDay !== null ? t.startDaily(today) : t.startStage(levelIndex + 1)}</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => setShowGuide(true)}
-                className="min-h-[44px] px-4 rounded-xl bg-[#141830] hover:bg-[#1c2142] border border-[var(--border-subtle)] text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-colors"
+                onClick={() => guideRef.current?.showModal()}
+                className="min-h-[42px] px-3.5 rounded-lg bg-elevated hover:bg-elevated-hover border border-line-strong text-ink font-semibold text-xs flex items-center gap-1.5 transition-colors"
               >
-                <HelpCircle className="w-4 h-4 text-sky-400" aria-hidden="true" />
+                <HelpCircle className="w-3.5 h-3.5 text-ink-secondary" aria-hidden="true" />
                 <span>{t.guideBtn}</span>
               </button>
             </div>
 
             {dailyDay !== null && (
-              <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-[11px] text-amber-200/90">
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-[11px] text-ink-secondary">
                 <span>{dailyBest > 0 ? t.dailyYourBest(dailyBest) : t.dailySameMap}</span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-950/50 border border-amber-500/30 text-amber-300 tabular-nums">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-elevated border border-line-strong text-gold tabular-nums">
                   <Clock className="w-3 h-3" aria-hidden="true" />
                   {t.dailyResetIn(utcCountdown)}
                 </span>
@@ -1484,36 +1461,36 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
         )}
 
         {gameState === 'gameover' && (
-          <div className="absolute inset-0 bg-[#070814]/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+          <div className="absolute inset-0 bg-canvas/92 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center">
             <div
-              className="w-11 h-11 rounded-2xl bg-rose-500/15 border border-rose-500/40 flex items-center justify-center mb-2"
+              className="w-10 h-10 rounded-lg bg-danger/15 border border-danger/35 flex items-center justify-center mb-2"
               aria-hidden="true"
             >
-              <Skull className="w-6 h-6 text-rose-400" />
+              <Skull className="w-5 h-5 text-danger" />
             </div>
-            <h3 className="font-extrabold text-rose-400 text-base sm:text-lg tracking-wide mb-1">
+            <h2 className="font-extrabold text-danger text-base sm:text-lg tracking-wide mb-1">
               {t.gameOverTitle}
-            </h3>
-            <p className="text-xs text-amber-200 font-medium max-w-sm mb-1.5">
+            </h2>
+            <p className="text-xs text-ink font-medium max-w-sm mb-1.5">
               &ldquo;{t.deathReasons[deathCause]}&rdquo;
             </p>
-            <p className="text-xs text-slate-400 tabular-nums mb-3.5">
-              {t.deaths}: <strong className="text-rose-300">{deaths}</strong> • {t.score}:{' '}
-              <strong className="text-white">{score}</strong>
+            <p className="text-xs text-ink-muted tabular-nums mb-3.5">
+              {t.deaths}: <strong className="text-ink">{deaths}</strong> • {t.score}:{' '}
+              <strong className="text-ink">{score}</strong>
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2">
               <button
                 type="button"
                 onClick={() => startGame(dailyDay !== null ? 'daily' : levelIndex)}
-                className="min-h-[42px] px-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:opacity-95 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition-opacity"
+                className="min-h-[40px] px-4 rounded-lg bg-signal hover:bg-signal-hover border border-[#c23b00] border-b-[3px] text-white font-bold text-xs flex items-center gap-1.5 transition-colors"
               >
-                <RotateCcw className="w-4 h-4" aria-hidden="true" />
+                <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>{t.tryAgain}</span>
               </button>
               <button
                 type="button"
                 onClick={handleShareScore}
-                className="min-h-[42px] px-4 rounded-xl bg-[#151933] hover:bg-[#1d2244] border border-rose-500/40 text-rose-200 font-bold text-xs flex items-center gap-1.5 transition-colors"
+                className="min-h-[40px] px-4 rounded-lg bg-elevated hover:bg-elevated-hover border border-line-strong text-ink font-semibold text-xs flex items-center gap-1.5 transition-colors"
               >
                 <Share2 className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>{t.shareFail}</span>
@@ -1523,25 +1500,23 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
         )}
 
         {gameState === 'victory' && (
-          <div className="absolute inset-0 bg-[#070814]/88 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+          <div className="absolute inset-0 bg-canvas/90 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center">
             <div
-              className="w-11 h-11 rounded-2xl bg-amber-400/15 border border-amber-400/45 flex items-center justify-center mb-2"
+              className="w-10 h-10 rounded-lg bg-gold/15 border border-gold/40 flex items-center justify-center mb-2"
               aria-hidden="true"
             >
-              <Trophy className="w-6 h-6 text-amber-300" />
+              <Trophy className="w-5 h-5 text-gold" />
             </div>
-            <h3 className="font-extrabold text-amber-300 text-base sm:text-lg tracking-wide mb-1">
+            <h2 className="font-extrabold text-gold text-base sm:text-lg tracking-wide mb-1">
               {dailyDay !== null
                 ? t.victoryDailyTitle(dailyDay)
                 : levelIndex + 1 < LEVELS.length
                 ? t.victoryStageTitle(levelIndex + 1)
                 : t.victoryAllTitle}
-            </h3>
-            <p className="text-xs text-slate-200 tabular-nums mb-1">
-              {t.victorySub(score)}
-            </p>
+            </h2>
+            <p className="text-xs text-ink tabular-nums mb-1">{t.victorySub(score)}</p>
             {dailyDay !== null && (
-              <p className="text-[11px] text-emerald-300 font-semibold tabular-nums mb-3">
+              <p className="text-xs text-ok font-semibold tabular-nums mb-2">
                 {t.dailyYourBest(Math.max(dailyBest, score))}
               </p>
             )}
@@ -1550,7 +1525,7 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
                 <button
                   type="button"
                   onClick={() => startGame(levelIndex + 1, true)}
-                  className="min-h-[42px] px-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 hover:opacity-95 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 shadow-md transition-opacity"
+                  className="min-h-[40px] px-4 rounded-lg bg-signal hover:bg-signal-hover border border-[#c23b00] border-b-[3px] text-white font-bold text-xs flex items-center gap-1.5 transition-colors"
                 >
                   <span>{t.nextStage(t.levelNames[levelIndex + 1] ?? LEVELS[levelIndex + 1].name)}</span>
                   <ChevronRight className="w-4 h-4" aria-hidden="true" />
@@ -1559,16 +1534,16 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
                 <button
                   type="button"
                   onClick={() => startGame(dailyDay !== null ? 'daily' : 0)}
-                  className="min-h-[42px] px-4 rounded-xl bg-[#151933] hover:bg-[#1d2244] border border-[var(--border-subtle)] text-white font-bold text-xs flex items-center gap-1.5 transition-colors"
+                  className="min-h-[40px] px-4 rounded-lg bg-elevated hover:bg-elevated-hover border border-line-strong text-ink font-semibold text-xs flex items-center gap-1.5 transition-colors"
                 >
-                  <RotateCcw className="w-4 h-4" aria-hidden="true" />
+                  <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>{t.playAgain}</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={handleShareScore}
-                className="min-h-[42px] px-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition-colors"
+                className="min-h-[40px] px-4 rounded-lg bg-brand hover:bg-brand-bright text-white font-semibold text-xs flex items-center gap-1.5 transition-colors"
               >
                 <Share2 className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>{t.shareWin}</span>
@@ -1578,140 +1553,132 @@ export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }:
         )}
       </div>
 
-      {/* Ergonomic Mobile Touch Pad (>= 56px height, zero layout shift) */}
-      <div className="mt-3.5 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-3 select-none touch-none">
+      {/* Mechanical Tactile Controller Deck */}
+      <div className="mt-3 pt-3 border-t border-line flex items-center justify-between gap-3 select-none touch-none">
         <div className="flex items-center gap-2">
           <button
             type="button"
             {...padEvents('left')}
             aria-label={t.ctrlLeft}
-            className={`w-16 sm:w-20 h-14 rounded-2xl border flex items-center justify-center transition-colors duration-100 ${
+            className={`w-16 sm:w-20 h-13 rounded-lg border flex items-center justify-center transition-colors duration-75 ${
               padActive.left
-                ? 'bg-sky-600 border-sky-300 text-white shadow-inner'
-                : 'bg-[#13172e] hover:bg-[#1a1f3d] border-[#2a3160] text-slate-100 shadow-md'
+                ? 'bg-brand border-brand-bright text-white'
+                : 'bg-elevated hover:bg-elevated-hover border-line-strong border-b-[3px] text-ink'
             }`}
           >
-            <ArrowLeft className="w-6 h-6" aria-hidden="true" />
+            <ArrowLeft className="w-5 h-5" aria-hidden="true" />
           </button>
 
           <button
             type="button"
             {...padEvents('right')}
             aria-label={t.ctrlRight}
-            className={`w-16 sm:w-20 h-14 rounded-2xl border flex items-center justify-center transition-colors duration-100 ${
+            className={`w-16 sm:w-20 h-13 rounded-lg border flex items-center justify-center transition-colors duration-75 ${
               padActive.right
-                ? 'bg-sky-600 border-sky-300 text-white shadow-inner'
-                : 'bg-[#13172e] hover:bg-[#1a1f3d] border-[#2a3160] text-slate-100 shadow-md'
+                ? 'bg-brand border-brand-bright text-white'
+                : 'bg-elevated hover:bg-elevated-hover border-line-strong border-b-[3px] text-ink'
             }`}
           >
-            <ArrowRight className="w-6 h-6" aria-hidden="true" />
+            <ArrowRight className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
+
+        <p className="hidden md:block text-xs text-ink-muted">{t.ctrlHintDesktop}</p>
 
         <button
           type="button"
           {...padEvents('jump')}
           aria-label={t.ctrlJump}
-          className={`flex-1 max-w-[190px] h-14 px-5 rounded-2xl border font-extrabold text-sm tracking-wider flex items-center justify-center gap-2 transition-colors duration-100 ${
+          className={`flex-1 md:flex-none md:min-w-[156px] max-w-[190px] h-13 px-5 rounded-lg border font-extrabold text-xs sm:text-sm tracking-wider flex items-center justify-center gap-2 transition-colors duration-75 ${
             padActive.jump
-              ? 'bg-rose-500 border-rose-300 text-white shadow-inner'
-              : 'bg-gradient-to-r from-violet-600 to-sky-600 hover:from-violet-500 hover:to-sky-500 border-violet-400/50 text-white shadow-lg shadow-violet-950/50'
+              ? 'bg-brand border-brand-bright text-white'
+              : 'bg-signal hover:bg-signal-hover border-[#c23b00] border-b-[3px] text-white'
           }`}
         >
-          <ArrowUp className="w-5 h-5" aria-hidden="true" />
+          <ArrowUp className="w-4.5 h-4.5" aria-hidden="true" />
           <span>{t.ctrlJump}</span>
         </button>
       </div>
 
-      <p className="hidden sm:block text-center text-[11px] text-slate-400 mt-2.5">
-        {t.ctrlHintDesktop}
-      </p>
-
-      {/* Accessible How-To-Play Modal */}
-      {showGuide && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setShowGuide(false)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="guide-dialog-title"
-            onClick={(e) => e.stopPropagation()}
-            className="bg-[#111428] border border-[var(--border-subtle)] rounded-2xl max-w-md w-full p-5 relative shadow-2xl space-y-4 text-xs text-slate-200 max-h-[85dvh] overflow-y-auto"
+      {/* Accessible Native How-To-Play Dialog */}
+      <dialog
+        ref={guideRef}
+        aria-labelledby="guide-dialog-title"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) e.currentTarget.close();
+        }}
+        className="m-auto backdrop:bg-black/75 bg-surface border border-line-strong rounded-xl max-w-md w-[calc(100%-2rem)] p-5 space-y-4 text-xs text-ink-secondary max-h-[85dvh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between pb-3 border-b border-line">
+          <div className="flex items-center gap-2">
+            <HelpCircle className="w-4.5 h-4.5 text-brand-bright" aria-hidden="true" />
+            <h2 id="guide-dialog-title" className="font-bold text-ink text-sm">
+              {t.guideTitle}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => guideRef.current?.close()}
+            aria-label="Close"
+            className="w-8 h-8 rounded-lg text-ink-muted hover:text-ink hover:bg-elevated flex items-center justify-center"
           >
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)]">
-              <div className="flex items-center gap-2">
-                <HelpCircle className="w-5 h-5 text-sky-400" aria-hidden="true" />
-                <h2 id="guide-dialog-title" className="font-bold text-white text-sm">
-                  {t.guideTitle}
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowGuide(false)}
-                aria-label="Close"
-                className="min-w-[36px] min-h-[36px] rounded-xl text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center"
-              >
-                <X className="w-4 h-4" aria-hidden="true" />
-              </button>
-            </div>
+            <X className="w-4 h-4" aria-hidden="true" />
+          </button>
+        </div>
 
-            <div className="space-y-3.5">
-              <div>
-                <h3 className="font-bold text-white mb-1">{t.guideControlsTitle}</h3>
-                <p className="text-slate-300 leading-relaxed">{t.guideControlsBody}</p>
-              </div>
+        <div className="space-y-3.5">
+          <div>
+            <h3 className="font-bold text-ink mb-1">{t.guideControlsTitle}</h3>
+            <p className="leading-relaxed">{t.guideControlsBody}</p>
+          </div>
 
-              <div>
-                <h3 className="font-bold text-white mb-1.5">{t.guideScoreTitle}</h3>
-                <ul className="space-y-1.5 text-slate-200">
-                  <li className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-sky-400 shrink-0" aria-hidden="true" />
-                    <span>{t.guideScoreBase(POINTS.base)}</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-3 h-3 rotate-45 bg-purple-400 shrink-0" aria-hidden="true" />
-                    <span>{t.guideScoreFc(POINTS.farcaster)}</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-sm bg-amber-400 shrink-0" aria-hidden="true" />
-                    <span>{t.guideScoreMystery(POINTS.question)}</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Zap className="w-3.5 h-3.5 text-emerald-400 shrink-0" aria-hidden="true" />
-                    <span>{t.guideScoreStomp(POINTS.stomp)}</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Flag className="w-3.5 h-3.5 text-amber-300 shrink-0" aria-hidden="true" />
-                    <span>{t.guideScoreFlag(POINTS.flag)}</span>
-                  </li>
-                </ul>
-              </div>
+          <div>
+            <h3 className="font-bold text-ink mb-1.5">{t.guideScoreTitle}</h3>
+            <ul className="space-y-1.5 text-ink">
+              <li className="flex items-center gap-2.5">
+                <span className="w-3 h-3 rounded-full bg-brand shrink-0" aria-hidden="true" />
+                <span>{t.guideScoreBase(POINTS.base)}</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <span className="w-3 h-3 rotate-45 bg-signal shrink-0" aria-hidden="true" />
+                <span>{t.guideScoreFc(POINTS.farcaster)}</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <span className="w-3 h-3 rounded-xs bg-gold shrink-0" aria-hidden="true" />
+                <span>{t.guideScoreMystery(POINTS.question)}</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Zap className="w-3.5 h-3.5 text-ok shrink-0" aria-hidden="true" />
+                <span>{t.guideScoreStomp(POINTS.stomp)}</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Flag className="w-3.5 h-3.5 text-gold shrink-0" aria-hidden="true" />
+                <span>{t.guideScoreFlag(POINTS.flag)}</span>
+              </li>
+            </ul>
+          </div>
 
-              <div className="p-3 rounded-xl bg-rose-950/35 border border-rose-500/35 text-rose-100 space-y-1.5">
-                <h3 className="font-bold text-rose-300 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
-                  <span>{t.guideTrapTitle}</span>
-                </h3>
-                <ul className="space-y-1 text-rose-100/90 list-disc list-inside">
-                  {t.guideTraps.map((tip, idx) => (
-                    <li key={idx}>{tip}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowGuide(false)}
-              className="w-full min-h-[44px] rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold transition-colors"
-            >
-              {t.guideClose}
-            </button>
+          <div className="p-3 rounded-lg bg-canvas border border-danger/35 space-y-1.5">
+            <h3 className="font-bold text-danger flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <span>{t.guideTrapTitle}</span>
+            </h3>
+            <ul className="space-y-1 text-ink-secondary list-disc list-inside">
+              {t.guideTraps.map((tip, idx) => (
+                <li key={idx}>{tip}</li>
+              ))}
+            </ul>
           </div>
         </div>
-      )}
+
+        <button
+          type="button"
+          onClick={() => guideRef.current?.close()}
+          className="w-full min-h-[40px] rounded-lg bg-brand hover:bg-brand-bright text-white font-semibold transition-colors"
+        >
+          {t.guideClose}
+        </button>
+      </dialog>
     </section>
   );
 }

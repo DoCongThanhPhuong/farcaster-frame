@@ -76,7 +76,7 @@ export function AirdropApp() {
   const currentDay = dailyNumber();
 
   return (
-    <div className="min-h-dvh flex flex-col">
+    <div className="min-h-dvh flex flex-col bg-canvas">
       <Navbar
         locale={locale}
         onLocaleChange={handleLocaleChange}
@@ -84,43 +84,47 @@ export function AirdropApp() {
         isInMiniApp={isInMiniApp}
       />
 
-      <main className="flex-1 max-w-2xl w-full mx-auto px-3 sm:px-4 py-3 sm:py-5 space-y-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-        {sdkChecked && !isInMiniApp && (
-          <div
-            role="note"
-            className="rounded-xl border border-sky-500/25 bg-sky-950/25 px-3.5 py-2.5 text-xs text-sky-200/90 flex items-start gap-2.5"
-          >
-            <Info className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" aria-hidden="true" />
-            <span>{t.webPreviewBanner}</span>
-          </div>
-        )}
+      <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-3 sm:py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-4 lg:gap-6 items-start">
+          <BaseMarioGame
+            locale={locale}
+            fid={activeFid}
+            onHighScoreChange={setGameHighScore}
+            onDailyRunEnd={setLastDailyRun}
+          />
 
-        <BaseMarioGame
-          locale={locale}
-          fid={activeFid}
-          onHighScoreChange={setGameHighScore}
-          onDailyRunEnd={setLastDailyRun}
-        />
+          <aside className="space-y-4 lg:sticky lg:top-18">
+            <DailyLeaderboard
+              locale={locale}
+              day={lastDailyRun?.day ?? currentDay}
+              isInMiniApp={isInMiniApp}
+              username={user?.username}
+              fid={activeFid}
+              lastRun={lastDailyRun}
+            />
 
-        <DailyLeaderboard
-          locale={locale}
-          day={lastDailyRun?.day ?? currentDay}
-          isInMiniApp={isInMiniApp}
-          username={user?.username}
-          fid={activeFid}
-          lastRun={lastDailyRun}
-        />
+            <ShareCastCard
+              locale={locale}
+              highScore={gameHighScore}
+              day={currentDay}
+            />
 
-        <ShareCastCard
-          locale={locale}
-          highScore={gameHighScore}
-          day={currentDay}
-        />
-
-        <footer className="text-center text-[11px] text-slate-400 pt-1 pb-2">
-          {t.footer}
-        </footer>
+            {sdkChecked && !isInMiniApp && (
+              <div
+                role="note"
+                className="rounded-lg border border-line bg-surface px-3.5 py-3 text-xs text-ink-secondary flex items-start gap-2.5 leading-relaxed"
+              >
+                <Info className="w-4 h-4 text-brand-bright shrink-0 mt-0.5" aria-hidden="true" />
+                <span>{t.webPreviewBanner}</span>
+              </div>
+            )}
+          </aside>
+        </div>
       </main>
+
+      <footer className="border-t border-line py-3 px-4 text-center text-xs text-ink-muted">
+        {t.footer}
+      </footer>
     </div>
   );
 }
