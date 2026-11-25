@@ -2,49 +2,46 @@
 
 import { useEffect, useState } from 'react';
 import sdk from '@farcaster/frame-sdk';
-import { useAccount } from 'wagmi';
+import { Info } from 'lucide-react';
 import { Navbar } from './Navbar';
-import { AirdropEligibilityCard } from './AirdropEligibilityCard';
-import { DailyStreakCard } from './DailyStreakCard';
-import { OnchainMintCard } from './OnchainMintCard';
-import { ShareCastCard } from './ShareCastCard';
-import { BuilderAirdropGuideModal } from './BuilderAirdropGuideModal';
 import { BaseMarioGame } from './BaseMarioGame';
 import { DailyLeaderboard, type DailyRun } from './DailyLeaderboard';
+import { ShareCastCard } from './ShareCastCard';
 import { dailyNumber } from '@/lib/levels';
+import { detectLocale, I18N, saveLocale, type Locale } from '@/lib/i18n';
 
 export function AirdropApp() {
-  const { isConnected } = useAccount();
+  const [locale, setLocale] = useState<Locale>('vi');
   const [isInMiniApp, setIsInMiniApp] = useState(false);
+  const [sdkChecked, setSdkChecked] = useState(false);
   const [user, setUser] = useState<{
     fid?: number;
     username?: string;
-    displayName?: string;
     pfpUrl?: string;
   } | null>(null);
 
-  const [customFid, setCustomFid] = useState<number | null>(null);
-  const [streakDays, setStreakDays] = useState(0);
-  const [hasMintedPass, setHasMintedPass] = useState(false);
-  const [activeTab, setActiveTab] = useState<'airdrop' | 'game'>('game');
   const [gameHighScore, setGameHighScore] = useState(0);
   const [lastDailyRun, setLastDailyRun] = useState<DailyRun | null>(null);
 
-  const activeFid = customFid || user?.fid || null;
+  const activeFid = user?.fid ?? null;
+  const t = I18N[locale];
+
+  useEffect(() => {
+    const detected = detectLocale();
+    setLocale(detected);
+    saveLocale(detected);
+  }, []);
+
+  const handleLocaleChange = (next: Locale) => {
+    setLocale(next);
+    saveLocale(next);
+  };
 
   useEffect(() => {
     try {
-      const streakKey = activeFid ? `fc_streak_${activeFid}` : 'fc_airdrop_streak';
-      const passKey = activeFid ? `fc_pass_${activeFid}` : 'fc_airdrop_has_minted_pass';
-      const savedStreak = localStorage.getItem(streakKey) || localStorage.getItem('fc_airdrop_streak');
-      if (savedStreak) setStreakDays(parseInt(savedStreak, 10) || 0);
-
-      const savedPass = localStorage.getItem(passKey) || localStorage.getItem('fc_airdrop_has_minted_pass');
-      if (savedPass === 'true') setHasMintedPass(true);
-
-      const gameKey = activeFid ? `fc_mario_highscore_${activeFid}` : 'fc_mario_highscore';
-      const savedGame = localStorage.getItem(gameKey);
-      if (savedGame) setGameHighScore(parseInt(savedGame, 10) || 0);
+      const key = activeFid ? `fc_farbase_highscore_${activeFid}` : 'fc_farbase_highscore';
+      const saved = localStorage.getItem(key);
+      if (saved) setGameHighScore(parseInt(saved, 10) || 0);
     } catch {}
   }, [activeFid]);
 
@@ -59,131 +56,69 @@ export function AirdropApp() {
           await sdk.actions.ready();
         }
 
-        // Fetch context
         if (context?.user) {
           setUser({
             fid: context.user.fid,
             username: context.user.username,
-            displayName: context.user.displayName,
             pfpUrl: context.user.pfpUrl,
           });
         }
-      } catch (err) {
+      } catch {
         setIsInMiniApp(false);
-        console.warn('Farcaster SDK init outside Warpcast:', err);
+      } finally {
+        setSdkChecked(true);
       }
     };
 
     initSdk();
   }, []);
-  const handlePassMinted = () => {
-    setHasMintedPass(true);
-    try {
-      const passKey = activeFid ? `fc_pass_${activeFid}` : 'fc_airdrop_has_minted_pass';
-      localStorage.setItem(passKey, 'true');
-    } catch {}
-  };
 
-  const handleCheckIn = (newStreak: number) => {
-    setStreakDays(newStreak);
-  };
+  const currentDay = dailyNumber();
 
   return (
-    <div className="min-h-screen bg-[#0c0d16] text-gray-100 flex flex-col">
-      <Navbar user={user} isInMiniApp={isInMiniApp} />
+    <div className="min-h-dvh flex flex-col">
+      <Navbar
+        locale={locale}
+        onLocaleChange={handleLocaleChange}
+        user={user}
+        isInMiniApp={isInMiniApp}
+      />
 
-      <main className="flex-1 max-w-2xl w-full mx-auto p-4 space-y-4">
-        {!isInMiniApp && (
-          <div className="bg-purple-950/40 border border-purple-800/40 rounded-xl p-3 text-xs text-purple-200 flex items-center justify-between">
-            <span>✨ Viewing in Web Browser mode. When opened in Warpcast, your FID and wallet are auto-detected.</span>
+      <main className="flex-1 max-w-2xl w-full mx-auto px-3 sm:px-4 py-3 sm:py-5 space-y-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        {sdkChecked && !isInMiniApp && (
+          <div
+            role="note"
+            className="rounded-xl border border-sky-500/25 bg-sky-950/25 px-3.5 py-2.5 text-xs text-sky-200/90 flex items-start gap-2.5"
+          >
+            <Info className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" aria-hidden="true" />
+            <span>{t.webPreviewBanner}</span>
           </div>
         )}
 
-        <div className="flex rounded-xl bg-gray-900/90 p-1 border border-gray-800 shadow-md">
-          <button
-            onClick={() => setActiveTab('game')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'game'
-                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <span>🎮 FarBase Rush</span>
-            <span className="px-1.5 py-0.5 rounded-full bg-yellow-400/20 text-yellow-300 text-[10px] font-extrabold">
-              {gameHighScore > 0 ? `${gameHighScore} pts` : 'HOT'}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('airdrop')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'airdrop'
-                ? 'bg-purple-600 text-white shadow-lg'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <span>🔥 Daily Tasks</span>
-          </button>
-        </div>
+        <BaseMarioGame
+          locale={locale}
+          fid={activeFid}
+          onHighScoreChange={setGameHighScore}
+          onDailyRunEnd={setLastDailyRun}
+        />
 
-        {activeTab === 'airdrop' ? (
-          <>
-            <AirdropEligibilityCard
-              fid={activeFid}
-              username={user?.username}
-              displayName={user?.displayName}
-              pfpUrl={user?.pfpUrl}
-              isWalletConnected={isConnected}
-              streakDays={streakDays}
-              hasMintedPass={hasMintedPass}
-              gameHighScore={gameHighScore}
-              onFidChange={(f) => setCustomFid(f)}
-              isInMiniApp={isInMiniApp}
-            />
+        <DailyLeaderboard
+          locale={locale}
+          day={lastDailyRun?.day ?? currentDay}
+          isInMiniApp={isInMiniApp}
+          username={user?.username}
+          fid={activeFid}
+          lastRun={lastDailyRun}
+        />
 
-            <DailyStreakCard
-              streakDays={streakDays}
-              onCheckIn={handleCheckIn}
-              fid={activeFid}
-            />
+        <ShareCastCard
+          locale={locale}
+          highScore={gameHighScore}
+          day={currentDay}
+        />
 
-            <OnchainMintCard
-              hasMintedPass={hasMintedPass}
-              onPassMinted={handlePassMinted}
-              fid={activeFid}
-            />
-
-            <ShareCastCard
-              fid={activeFid}
-              streakDays={streakDays}
-            />
-
-            <BuilderAirdropGuideModal />
-          </>
-        ) : (
-          <>
-            <BaseMarioGame
-              fid={activeFid}
-              onHighScoreChange={(s) => setGameHighScore(s)}
-              onDailyRunEnd={setLastDailyRun}
-            />
-
-            <DailyLeaderboard
-              day={lastDailyRun?.day ?? dailyNumber()}
-              isInMiniApp={isInMiniApp}
-              username={user?.username}
-              fid={activeFid}
-              lastRun={lastDailyRun}
-            />
-
-            <ShareCastCard
-              fid={activeFid}
-              streakDays={streakDays}
-            />
-          </>
-        )}
-
-        <footer className="text-center text-[11px] text-gray-500 py-4">
-          Farcaster Mini App • Built for Farcaster &amp; Base Builder Ecosystem
+        <footer className="text-center text-[11px] text-slate-400 pt-1 pb-2">
+          {t.footer}
         </footer>
       </main>
     </div>

@@ -1,84 +1,37 @@
-# Farcaster Frame v2 (Mini App) - Builder Airdrop & Rewards 🪂
+# FarBase Rush — Farcaster Mini App Arcade
 
-Dự án Farcaster Frame v2 (Mini App) hoàn chỉnh chuẩn Warpcast & Base L2, tối ưu cho builder săn airdrop từ hệ sinh thái Farcaster (Warpcast Builder Rounds, Base Grants, Moxie, Degen).
-
----
-
-## ⚡ Tính Năng Săn Airdrop & Tăng Tương Tác
-
-1. **Chuẩn Frame v2 (Mini App) & Tương thích v1:**
-   - Manifest chuẩn `/.well-known/farcaster.json` kèm `accountAssociation` và `frame`.
-   - Dynamic meta tags `fc:frame` (action `launch_frame`), OpenGraph, fallback v1 endpoint (`/api/frame`).
-   - Tự động sinh ảnh động SVG/PNG (`/opengraph-image`, `/icon.png`, `/splash.png`, `/image`).
-
-2. **Tích hợp @farcaster/frame-sdk & Farcaster In-app Wallet:**
-   - Nhận diện người dùng (FID, username, display name, avatar).
-   - Tự động gọi `sdk.actions.ready()` tắt màn hình chờ (splash).
-   - Nút "Pin App" ghim ứng dụng vào dock Warpcast của user.
-
-3. **Tính Điểm & Điều Kiện Airdrop (Airdrop Eligibility Score):**
-   - Phân hạng theo độ tuổi tài khoản (Seniority theo FID: OG Legend, Pro Builder, Early Adopter).
-   - Tính hệ số Multiplier theo streak check-in và trạng thái kết nối ví.
-
-4. **Vòng Lặp Giữ Chân Người Dùng (Daily Check-in Streak):**
-   - Check-in nhận điểm mỗi 24h (1 - 7 ngày streak).
-   - Tăng chỉ số DAU (Daily Active Users) của Frame — tiêu chí hàng đầu để nhận Farcaster & Moxie Builder Grants.
-
-5. **Tương Tác Onchain Trên Mạng Base (Wagmi + Viem):**
-   - Free Mint "Builder Pass" trực tiếp trên Base / Base Sepolia.
-   - Hỗ trợ Gasless Signature (ký thông điệp xác thực không tốn gas).
-   - Tăng transaction count onchain cho dự án.
-
-6. **Viral Loop (Tự Động Share Cast):**
-   - Gọi `sdk.actions.composeCast` mở trực tiếp trình soạn thảo Warpcast kèm link Frame.
-   - User chia sẻ streak giúp kéo thêm người dùng tự nhiên vào Frame của bạn.
+Game platformer vượt cạm bẫy (**Trap Arcade**) trên hệ sinh thái Farcaster & Base, hỗ trợ **4 ngôn ngữ** (`Tiếng Việt`, `English`, `Español`, `日本語`), thử thách bản đồ chung hàng ngày (**Daily Seeded Challenge**) và bảng xếp hạng server xác thực FID qua **Quick Auth + Upstash Redis**.
 
 ---
 
-## 🚀 Hướng Dẫn Chạy & Deploy
+## Tính năng chính
 
-### 1. Cài đặt & Chạy Local
+1. **Chuẩn Farcaster Mini App (Frame v2 + fallback v1):**
+   - Manifest `/.well-known/farcaster.json`, dynamic OpenGraph & vector splash/icon (`/opengraph-image`, `/icon.png`, `/splash.png`).
+   - Tự động nhận diện người dùng Farcaster (`sdk.context`), tắt splash (`sdk.actions.ready()`), nút ghim ứng dụng (`sdk.actions.addFrame`) và chia sẻ kết quả trực tiếp lên Warpcast (`sdk.actions.composeCast`).
+
+2. **FarBase Rush (HiDPI Neon-Cyber Trap Arcade):**
+   - 3 màn chiến dịch (*Genesis Block*, *Gas Wars*, *Bear Market*) + **Daily Challenge** sinh tự động mỗi ngày UTC (mọi người chơi cùng 1 map).
+   - Đồ họa Canvas Retina HiDPI, nền parallax đa lớp, hiệu ứng rung màn hình (tôn trọng `prefers-reduced-motion`), điều khiển bàn phím & cụm nút cảm ứng chuẩn kích thước mobile (`>= 56px`).
+
+3. **Giao diện Đa ngôn ngữ (`vi` / `en` / `es` / `ja`):**
+   - Tự động phát hiện theo ngôn ngữ trình duyệt, lưu tùy chọn và chuyển tức thì ngay trên thanh đầu trang (bao gồm cả chữ nổi trong Canvas và nội dung Share Cast).
+
+4. **Bảng xếp hạng Daily Challenge (Upstash Redis):**
+   - Xác thực FID bằng `@farcaster/quick-auth`, kiểmop trần điểm `maxScore(dailyLevel(day))`, ân hạn 10 phút sau nửa đêm UTC.
+
+---
+
+## Chạy & Kiểm thử
+
 ```bash
 npm install
 npm run dev
-```
-Mở trình duyệt: `http://localhost:3000` (hỗ trợ cả chế độ Web Preview và kết nối ví MetaMask/Coinbase/Farcaster).
-
-### 2. Kiểm Tra Test Suite
-```bash
 npm test
 ```
 
-### 3. Deploy Lên Vercel
-1. Push mã nguồn lên GitHub:
-   ```bash
-   git add .
-   git commit -m "feat: farcaster frame v2 mini app for builder airdrop"
-   git push origin main
-   ```
-2. Truy cập [Vercel](https://vercel.com), import repository `farcaster-frame`.
-3. Vercel tự động nhận diện framework **Next.js** và deploy HTTPS.
+## Cấu hình biến môi trường trên Vercel
 
-### 4. Xác Thực Domain Trên Warpcast Developer Portal
-1. Truy cập [Warpcast Frame Developer Portal](https://warpcast.com/~/developers/frames).
-2. Nhập URL domain Vercel của bạn (ví dụ: `https://your-project.vercel.app`).
-3. Dùng tài khoản Warpcast của bạn để ký thông điệp liên kết domain (Account Association).
-4. Sao chép các trường `header`, `payload`, `signature` vào biến môi trường trên Vercel:
-   - `FARCASTER_HEADER`
-   - `FARCASTER_PAYLOAD`
-   - `FARCASTER_SIGNATURE`
-   - `NEXT_PUBLIC_HOST` (ví dụ: `your-project.vercel.app`)
-5. Redeploy lại Vercel để áp dụng chữ ký.
-
-### 4b. Bật Leaderboard Daily Challenge (Upstash Redis)
-1. Trên Vercel: **Storage → Marketplace → Upstash (Redis)**, tạo database và connect vào project. Vercel tự thêm `KV_REST_API_URL` và `KV_REST_API_TOKEN` (hoặc tự đặt `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`).
-2. Đảm bảo `NEXT_PUBLIC_HOST` khớp đúng domain của Mini App: token Quick Auth được cấp cho domain đó, server verify theo domain này.
-3. Redeploy. Chưa cấu hình thì `/api/leaderboard` trả `503` và card leaderboard tự ẩn, game vẫn chạy bình thường.
-
-Điểm chỉ được gửi từ trong Farcaster client (Quick Auth xác thực FID). Server chỉ nhận điểm của ngày hiện tại (cho thêm 10 phút sau nửa đêm UTC với lượt chơi dở) và từ chối điểm vượt quá mức tối đa có thể đạt trên màn của ngày đó.
-
-> ⚠️ Điểm vẫn do client tự báo: ai có token Quick Auth cũng gửi được điểm tối đa. Đủ cho bảng xếp hạng vui, **chưa đủ để gắn giải thưởng** — trước đó cần xác minh lượt chơi phía server.
-
-### 5. Cast Lên Warpcast Để Bắt Đầu Tính Điểm Builder
-- Đăng cast chứa link Frame vào các channel: `/base`, `/farcaster`, `/dev`, `/frames`.
-- Khi user bấm nút trên feed, Mini App sẽ mở ra với đầy đủ tính năng claim và mint.
+- `NEXT_PUBLIC_HOST`: domain của Mini App (ví dụ `farcaster-frame.vercel.app`).
+- `FARCASTER_HEADER`, `FARCASTER_PAYLOAD`, `FARCASTER_SIGNATURE`: chữ ký liên kết domain từ Warpcast Developer Portal.
+- `KV_REST_API_URL`, `KV_REST_API_TOKEN` (hoặc `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`): kết nối Upstash Redis từ Vercel Storage Marketplace để bật `/api/leaderboard`.

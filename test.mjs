@@ -44,8 +44,13 @@ try {
   assert.strictEqual(resSplash.status, 200);
   assert.strictEqual(resSplash.headers.get('content-type'), 'image/png');
 
+  const resOg = await fetch(`http://localhost:${PORT}/opengraph-image`);
+  assert.strictEqual(resOg.status, 200);
+  assert.strictEqual(resOg.headers.get('content-type'), 'image/png');
+
   const resFavicon = await fetch(`http://localhost:${PORT}/favicon.ico`, { redirect: 'manual' });
   assert(resFavicon.status === 200 || resFavicon.status === 307 || resFavicon.status === 308, 'Favicon failed');
+
   const resPost = await fetch(`http://localhost:${PORT}/api/frame`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -54,13 +59,6 @@ try {
   assert.strictEqual(resPost.status, 200);
   const postHtml = await resPost.text();
   assert(postHtml.includes('FID #9999'), 'Missing FID in POST response');
-
-  const resSigBad = await fetch(`http://localhost:${PORT}/api/verify-signature`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address: 'invalid', message: 'test', signature: '0x0' }),
-  });
-  assert.strictEqual(resSigBad.status, 400);
 
   const resBoard = await fetch(`http://localhost:${PORT}/api/leaderboard`);
   assert.strictEqual(resBoard.status, 503, 'Unconfigured leaderboard must answer 503');
@@ -80,41 +78,23 @@ try {
     assert.strictEqual((await postScore({ Authorization: `Bearer ${token}` })).status, 401, `Forged token ${token} must be 401`);
   }
 
-  function calculatePoints(fid, isWallet, streak, hasPass, gameScore) {
-    let fidPoints = fid ? 1200 : 0;
-    if (fid && fid < 10000) fidPoints = 8500;
-    else if (fid && fid < 50000) fidPoints = 4800;
-    else if (fid && fid < 200000) fidPoints = 2600;
-
-    let mult = 1.0;
-    if (isWallet) mult += 0.3;
-    if (streak > 0) mult += streak * 0.15;
-    if (hasPass) mult += 0.5;
-    if (gameScore >= 100) mult += 0.2;
-
-    return Math.round(fidPoints * mult);
+  // i18n parity check across all 4 supported languages (vi, en, es, ja).
+  const { I18N, LOCALES, isLocale, formatUtcCountdown } = await import('./lib/i18n.ts');
+  assert.deepStrictEqual([...LOCALES], ['vi', 'en', 'es', 'ja']);
+  const refKeys = Object.keys(I18N.vi).sort();
+  for (const loc of LOCALES) {
+    assert(isLocale(loc));
+    assert.deepStrictEqual(Object.keys(I18N[loc]).sort(), refKeys, `Missing i18n keys for ${loc}`);
+    assert.strictEqual(I18N[loc].levelNames.length, 3);
+    assert.strictEqual(I18N[loc].guideTraps.length, 4);
+    assert(I18N[loc].boardTitle(5).includes('5'));
+    assert(I18N[loc].castDaily(5, 420, 3, true).includes('420'));
   }
-
-  assert.strictEqual(calculatePoints(500, false, 0, false, 0), 8500);
-  assert.strictEqual(calculatePoints(25000, true, 2, true, 120), Math.round(4800 * (1.0 + 0.3 + 0.3 + 0.5 + 0.2)));
-
-  function computeNextStreak(lastCheckinTime, currentStreak, now) {
-    const diffMs = now - lastCheckinTime;
-    const cooldown = 24 * 60 * 60 * 1000;
-    const expired = diffMs > 48 * 60 * 60 * 1000;
-    if (diffMs < cooldown && lastCheckinTime > 0) return { canClaim: false, nextStreak: currentStreak };
-    if (expired) return { canClaim: true, nextStreak: 1 };
-    return { canClaim: true, nextStreak: currentStreak + 1 };
-  }
-
-  const now = Date.now();
-  assert.strictEqual(computeNextStreak(now - 1000 * 60 * 60 * 2, 3, now).canClaim, false);
-  assert.strictEqual(computeNextStreak(now - 1000 * 60 * 60 * 25, 3, now).nextStreak, 4);
-  assert.strictEqual(computeNextStreak(now - 1000 * 60 * 60 * 50, 3, now).nextStreak, 1);
+  assert(!isLocale('fr'));
+  assert.match(formatUtcCountdown(Date.UTC(2026, 10, 25, 22, 30)), /^1h 30m$/);
 
   // Level layout sanity: physics gives ~140px of horizontal jump reach, so keep every hop under 100px.
   const { LEVELS, dailyLevel, dailyNumber, maxScore, POINTS } = await import('./lib/levels.ts');
-  // Genesis Block: 6 base + 6 farcaster coins, 6 ? blocks, 6 enemies, flag.
   assert.strictEqual(maxScore(LEVELS[0]), 6 * POINTS.base + 6 * POINTS.farcaster + 6 * POINTS.question + 6 * POINTS.stomp + POINTS.flag);
   assert.strictEqual(maxScore(LEVELS[0]), 1700);
   const MAX_HOP = 100;
@@ -139,7 +119,6 @@ try {
 
     for (const cp of lv.checkpoints) {
       assert(onGround(cp), `${lv.name}: checkpoint ${cp} not on ground`);
-      // Respawn drops in from y=150, so landing on a pipe is fine; landing on a collapsing column is not.
       const blocked = lv.platforms.some((p) => p.type === 'hollow_column' && cp < p.x + p.w && cp + 20 > p.x);
       assert(!blocked, `${lv.name}: checkpoint ${cp} respawns onto a hollow column`);
     }
@@ -162,7 +141,7 @@ try {
   assert.strictEqual(dailyNumber(Date.UTC(2026, 9, 26, 23, 59)), 1);
   assert.strictEqual(dailyNumber(Date.UTC(2026, 9, 27, 0, 1)), 2);
 
-  // Leaderboard storage against a minimal in-memory Upstash REST server (just the commands lib/leaderboard.ts uses).
+  // Leaderboard storage against a minimal in-memory Upstash REST server.
   const zsets = new Map();
   const hashes = new Map();
   const run = ([cmd, key, ...a]) => {
@@ -190,7 +169,6 @@ try {
       default: throw new Error(`fake redis: unsupported ${cmd}`);
     }
   };
-  // When the client asks for base64 responses it decodes every string it gets back.
   const b64 = (v) => (typeof v === 'string' ? Buffer.from(v).toString('base64') : Array.isArray(v) ? v.map(b64) : v);
   const { createServer } = await import('node:http');
   const fakeRedis = createServer((req, res) => {
@@ -224,7 +202,7 @@ try {
     fakeRedis.close();
   }
 
-  console.log('✅ All Farcaster Frame v2, API endpoints & unit logic test suites passed!');
+  console.log('All FarBase Rush Mini App, i18n, level & leaderboard tests passed!');
 } finally {
   try {
     process.kill(-child.pid, 'SIGKILL');

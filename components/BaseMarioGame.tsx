@@ -1,11 +1,34 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import sdk from '@farcaster/frame-sdk';
-import { Play, RotateCcw, Share2, Trophy, Volume2, VolumeX, ArrowLeft, ArrowRight, ArrowUp, Sparkles, Heart, Skull, HelpCircle, X, Lock, ChevronRight, CalendarDays } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback, type PointerEvent } from 'react';
+import { shareCast } from './ShareCastCard';
+import {
+  Play,
+  RotateCcw,
+  Share2,
+  Trophy,
+  Volume2,
+  VolumeX,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  Heart,
+  Skull,
+  HelpCircle,
+  X,
+  Lock,
+  ChevronRight,
+  CalendarDays,
+  AlertTriangle,
+  Flag,
+  Zap,
+  Clock,
+} from 'lucide-react';
 import { LEVELS, POINTS, dailyLevel, dailyNumber, type PlatformType } from '@/lib/levels';
+import { formatUtcCountdown, I18N, type DeathCause, type Locale } from '@/lib/i18n';
 
 interface BaseMarioGameProps {
+  locale: Locale;
   fid: number | null;
   onHighScoreChange?: (highScore: number) => void;
   onDailyRunEnd?: (run: { day: number; score: number }) => void;
@@ -13,134 +36,82 @@ interface BaseMarioGameProps {
 
 class RetroAudio {
   private ctx: AudioContext | null = null;
-  public enabled: boolean = true;
+  public enabled = true;
 
-  private init() {
-    if (!this.ctx && typeof window !== 'undefined') {
-      if ('AudioContext' in window) {
-        this.ctx = new window.AudioContext();
+  private play(
+    type: OscillatorType,
+    freqs: [number, number] | number[],
+    dur: number,
+    vol: number,
+    ramp?: 'exp' | 'lin'
+  ) {
+    if (!this.enabled || typeof window === 'undefined' || !('AudioContext' in window)) return;
+    try {
+      this.ctx ??= new window.AudioContext();
+      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      const t0 = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = type;
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      if (ramp && freqs.length === 2) {
+        osc.frequency.setValueAtTime(freqs[0], t0);
+        if (ramp === 'lin') osc.frequency.linearRampToValueAtTime(freqs[1], t0 + dur);
+        else osc.frequency.exponentialRampToValueAtTime(freqs[1], t0 + dur);
+      } else {
+        freqs.forEach((f, i) => osc.frequency.setValueAtTime(f, t0 + i * 0.055));
       }
-    }
+      gain.gain.setValueAtTime(vol, t0);
+      gain.gain.exponentialRampToValueAtTime(0.01, t0 + dur);
+      osc.start(t0);
+      osc.stop(t0 + dur);
+    } catch {}
   }
 
   jump() {
-    if (!this.enabled) return;
-    this.init();
-    if (!this.ctx) return;
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(150, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(450, this.ctx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.12);
-    } catch {}
+    this.play('square', [170, 480], 0.11, 0.13, 'exp');
   }
-
   coin() {
-    if (!this.enabled) return;
-    this.init();
-    if (!this.ctx) return;
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(987, this.ctx.currentTime);
-      osc.frequency.setValueAtTime(1318, this.ctx.currentTime + 0.08);
-      gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.28);
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.28);
-    } catch {}
+    this.play('sine', [987, 987, 1318], 0.25, 0.18);
   }
-
   stomp() {
-    if (!this.enabled) return;
-    this.init();
-    if (!this.ctx) return;
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(180, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.15);
-      gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.15);
-    } catch {}
+    this.play('triangle', [210, 48], 0.14, 0.28, 'exp');
   }
-
   bonk() {
-    if (!this.enabled) return;
-    this.init();
-    if (!this.ctx) return;
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(450, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(70, this.ctx.currentTime + 0.22);
-      gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.22);
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.22);
-    } catch {}
+    this.play('sawtooth', [420, 68], 0.2, 0.3, 'exp');
   }
-
   powerUp() {
-    if (!this.enabled) return;
-    this.init();
-    if (!this.ctx) return;
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.type = 'triangle';
-      const notes = [330, 392, 659, 523, 587, 784];
-      notes.forEach((freq, i) => {
-        osc.frequency.setValueAtTime(freq, this.ctx!.currentTime + i * 0.06);
-      });
-      gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.4);
-    } catch {}
+    this.play('triangle', [330, 392, 523, 659, 784], 0.34, 0.18);
   }
-
   gameOver() {
-    if (!this.enabled) return;
-    this.init();
-    if (!this.ctx) return;
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(300, this.ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(80, this.ctx.currentTime + 0.5);
-      gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.5);
-    } catch {}
+    this.play('sawtooth', [280, 75], 0.45, 0.24, 'lin');
   }
 }
 
 const audio = new RetroAudio();
+
+const CANVAS_WIDTH = 480;
+const CANVAS_HEIGHT = 280;
+
+const STARS = Array.from({ length: 28 }, (_, i) => ({
+  x: (i * 97 + 23) % CANVAS_WIDTH,
+  y: (i * 43 + 13) % 145,
+  r: i % 4 === 0 ? 1.5 : 1,
+  phase: i * 0.7,
+}));
+
+const BUILDINGS = [
+  { x: 0, w: 38, h: 86, win: true },
+  { x: 44, w: 28, h: 62, win: false },
+  { x: 78, w: 46, h: 108, win: true },
+  { x: 130, w: 32, h: 74, win: false },
+  { x: 168, w: 52, h: 96, win: true },
+  { x: 226, w: 34, h: 68, win: true },
+  { x: 266, w: 44, h: 114, win: true },
+  { x: 316, w: 36, h: 78, win: false },
+];
+const SKYLINE_SPAN = 358;
 
 interface Particle {
   x: number;
@@ -148,7 +119,9 @@ interface Particle {
   vx: number;
   vy: number;
   color: string;
+  size: number;
   life: number;
+  maxLife: number;
 }
 
 interface FloatingText {
@@ -159,32 +132,198 @@ interface FloatingText {
   life: number;
 }
 
-const TROLL_DEATH_MESSAGES = [
-  'Bonked head on an invisible block and plunged into the abyss! 😈',
-  'Platform dev rugpulled right under your feet! 📉',
-  'Greedily grabbed a fake scam 10K$ airdrop coin! 🤡',
-  'Fell through a hollow trap column into the abyss! 🕳️',
-  'Goal flagpole ran away to tease you! 🏃💨',
-  'Liquidated by the FUD market cap monster! 🐻',
-  'Crushed by an instant Base gas fee spike! ⛽',
-  'FOMO reckless jump directly into a Syobon trap! 💀',
-];
+function setupHiDpiCanvas(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1;
+  const targetW = Math.round(CANVAS_WIDTH * dpr);
+  const targetH = Math.round(CANVAS_HEIGHT * dpr);
+  if (canvas.width !== targetW || canvas.height !== targetH) {
+    canvas.width = targetW;
+    canvas.height = targetH;
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return ctx;
+}
 
-export function BaseMarioGame({ fid, onHighScoreChange, onDailyRunEnd }: BaseMarioGameProps) {
+function drawBackdrop(ctx: CanvasRenderingContext2D, cameraX: number, tick: number, reducedMotion: boolean) {
+  const sky = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+  sky.addColorStop(0, '#060713');
+  sky.addColorStop(0.55, '#10132e');
+  sky.addColorStop(1, '#1d1542');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+  // Cyber planet / moon
+  const moonX = 392 - (cameraX * 0.04) % 80;
+  const moonGlow = ctx.createRadialGradient(moonX, 52, 6, moonX, 52, 46);
+  moonGlow.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+  moonGlow.addColorStop(0.5, 'rgba(124, 58, 237, 0.14)');
+  moonGlow.addColorStop(1, 'rgba(124, 58, 237, 0)');
+  ctx.fillStyle = moonGlow;
+  ctx.beginPath();
+  ctx.arc(moonX, 52, 46, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#38BDF8';
+  ctx.globalAlpha = 0.22;
+  ctx.beginPath();
+  ctx.arc(moonX, 52, 18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Starfield
+  for (const s of STARS) {
+    const alpha = reducedMotion ? 0.55 : 0.3 + 0.45 * Math.abs(Math.sin(tick * 0.03 + s.phase));
+    ctx.fillStyle = `rgba(226, 232, 240, ${alpha.toFixed(2)})`;
+    ctx.fillRect(s.x, s.y, s.r, s.r);
+  }
+
+  // Far skyline (0.18x parallax)
+  const skyShift = (cameraX * 0.18) % SKYLINE_SPAN;
+  for (let rep = -1; rep <= 2; rep++) {
+    const base = rep * SKYLINE_SPAN - skyShift;
+    for (const b of BUILDINGS) {
+      const bx = base + b.x;
+      if (bx + b.w < -10 || bx > CANVAS_WIDTH + 10) continue;
+      const by = 240 - b.h;
+      ctx.fillStyle = '#0c1026';
+      ctx.fillRect(bx, by, b.w, b.h);
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.22)';
+      ctx.strokeRect(bx + 0.5, by + 0.5, b.w - 1, b.h - 1);
+
+      if (b.win) {
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
+        for (let wy = by + 10; wy < 232; wy += 14) {
+          ctx.fillRect(bx + 6, wy, 5, 4);
+          if (b.w > 36) ctx.fillRect(bx + b.w - 12, wy, 5, 4);
+        }
+      }
+    }
+  }
+
+  // Midground synthwave ridges (0.38x parallax)
+  const ridgeShift = (cameraX * 0.38) % 240;
+  ctx.fillStyle = '#131636';
+  ctx.strokeStyle = 'rgba(167, 139, 250, 0.28)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-20, 242);
+  for (let rx = -240; rx <= CANVAS_WIDTH + 240; rx += 120) {
+    const px = rx - ridgeShift;
+    ctx.lineTo(px + 40, 198);
+    ctx.lineTo(px + 85, 218);
+    ctx.lineTo(px + 120, 190);
+  }
+  ctx.lineTo(CANVAS_WIDTH + 20, 242);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.lineWidth = 1;
+}
+
+function drawRunner(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  facing: 'left' | 'right',
+  grounded: boolean,
+  vx: number,
+  vy: number,
+  animTick: number,
+  invulnerable: number
+) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  if (invulnerable > 0) {
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(w / 2, 13, 17, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+
+  if (facing === 'left') {
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+  }
+
+  // Flowing neon scarf
+  const moving = Math.abs(vx) > 0.4 || !grounded;
+  const wave = moving ? Math.sin(animTick * 1.8) * 2.5 : 0;
+  ctx.fillStyle = '#F43F5E';
+  ctx.beginPath();
+  ctx.moveTo(4, 11);
+  ctx.lineTo(-6 - (moving ? 3 : 0), 13 + wave);
+  ctx.lineTo(-4, 17 + wave * 0.6);
+  ctx.lineTo(5, 14);
+  ctx.closePath();
+  ctx.fill();
+
+  // Helmet & crest
+  ctx.fillStyle = '#7C3AED';
+  ctx.fillRect(3, 0, 14, 4);
+  ctx.fillStyle = '#1E1B4B';
+  ctx.fillRect(2, 3, 16, 9);
+
+  // Glowing cyan visor
+  ctx.fillStyle = '#38BDF8';
+  ctx.fillRect(9, 5, 8, 4);
+  ctx.fillStyle = '#E0F2FE';
+  ctx.fillRect(13, 6, 3, 2);
+
+  // Suit torso
+  ctx.fillStyle = '#2563EB';
+  ctx.fillRect(3, 12, 14, 9);
+  ctx.fillStyle = '#A78BFA';
+  ctx.fillRect(7, 14, 6, 5);
+
+  // Boots
+  ctx.fillStyle = '#E2E8F0';
+  if (!grounded) {
+    const tuck = vy < 0 ? -2 : 1;
+    ctx.fillRect(2, 20 + tuck, 6, 5);
+    ctx.fillRect(12, 19 + tuck, 6, 5);
+  } else if (Math.abs(vx) > 0.4) {
+    const stride = Math.sin(animTick * Math.PI) * 3.2;
+    ctx.fillRect(2 + stride, 21, 6, 5);
+    ctx.fillRect(12 - stride, 21, 6, 5);
+  } else {
+    ctx.fillRect(3, 21, 6, 5);
+    ctx.fillRect(11, 21, 6, 5);
+  }
+
+  ctx.restore();
+}
+
+export function BaseMarioGame({ locale, fid, onHighScoreChange, onDailyRunEnd }: BaseMarioGameProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const cleanupLoopRef = useRef<(() => void) | null>(null);
+  const localeRef = useRef<Locale>(locale);
+  localeRef.current = locale;
+
   const [gameState, setGameState] = useState<'idle' | 'playing' | 'gameover' | 'victory'>('idle');
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [deaths, setDeaths] = useState(0);
-  const [deathReason, setDeathReason] = useState('Liquidated by market volatility! 📉');
+  const [deathCause, setDeathCause] = useState<DeathCause>('pit');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [lives, setLives] = useState(5);
+  const [progressPct, setProgressPct] = useState(0);
   const [showGuide, setShowGuide] = useState(false);
   const [levelIndex, setLevelIndex] = useState(0);
   const [unlockedLevel, setUnlockedLevel] = useState(0);
-  // null = campaign level; otherwise the Daily Challenge number being played.
   const [dailyDay, setDailyDay] = useState<number | null>(null);
   const [dailyBest, setDailyBest] = useState(0);
+  const [utcCountdown, setUtcCountdown] = useState(() => formatUtcCountdown());
+  const [padActive, setPadActive] = useState<{ left: boolean; right: boolean; jump: boolean }>({
+    left: false,
+    right: false,
+    jump: false,
+  });
 
   const keysRef = useRef<{ left: boolean; right: boolean; jump: boolean }>({
     left: false,
@@ -197,27 +336,28 @@ export function BaseMarioGame({ fid, onHighScoreChange, onDailyRunEnd }: BaseMar
     score: 0,
     highScore: 0,
     deaths: 0,
-    deathReason: 'Liquidated by market volatility! 📉',
+    deathCause: 'pit' as DeathCause,
     lives: 5,
   });
 
+  const t = I18N[locale];
   const unlockedKey = fid ? `fc_farbase_unlocked_${fid}` : 'fc_farbase_unlocked';
   const today = dailyNumber();
-  const runLabel = dailyDay !== null ? `Daily #${dailyDay}` : `Lv ${levelIndex + 1}: ${LEVELS[levelIndex].name}`;
+  const stageTitle =
+    dailyDay !== null
+      ? `${t.modeDaily} #${dailyDay}`
+      : `${levelIndex + 1}. ${t.levelNames[levelIndex] ?? LEVELS[levelIndex].name}`;
+
+  useEffect(() => {
+    const timer = setInterval(() => setUtcCountdown(formatUtcCountdown()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const key = fid ? `fc_farbase_highscore_${fid}` : 'fc_farbase_highscore';
     const deathKey = fid ? `fc_farbase_deaths_${fid}` : 'fc_farbase_deaths';
     try {
-      let savedScore = localStorage.getItem(key);
-      if (!savedScore) {
-        const oldKey = fid ? `fc_mario_highscore_${fid}` : 'fc_mario_highscore';
-        savedScore = localStorage.getItem(oldKey);
-        if (savedScore) {
-          localStorage.setItem(key, savedScore);
-          localStorage.removeItem(oldKey);
-        }
-      }
+      const savedScore = localStorage.getItem(key);
       if (savedScore) {
         const val = parseInt(savedScore, 10) || 0;
         setHighScore(val);
@@ -225,15 +365,7 @@ export function BaseMarioGame({ fid, onHighScoreChange, onDailyRunEnd }: BaseMar
         onHighScoreChange?.(val);
       }
 
-      let savedDeaths = localStorage.getItem(deathKey);
-      if (!savedDeaths) {
-        const oldDeathKey = fid ? `fc_mario_deaths_${fid}` : 'fc_mario_deaths';
-        savedDeaths = localStorage.getItem(oldDeathKey);
-        if (savedDeaths) {
-          localStorage.setItem(deathKey, savedDeaths);
-          localStorage.removeItem(oldDeathKey);
-        }
-      }
+      const savedDeaths = localStorage.getItem(deathKey);
       if (savedDeaths) {
         const dVal = parseInt(savedDeaths, 10) || 0;
         setDeaths(dVal);
@@ -248,673 +380,882 @@ export function BaseMarioGame({ fid, onHighScoreChange, onDailyRunEnd }: BaseMar
     } catch {}
   }, [fid, onHighScoreChange, unlockedKey]);
 
+  // Paint a crisp static preview scene when idle so the arcade screen looks alive before pressing Start.
+  useEffect(() => {
+    if (gameState !== 'idle') return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = setupHiDpiCanvas(canvas);
+    if (!ctx) return;
+
+    drawBackdrop(ctx, 0, 12, true);
+    ctx.fillStyle = '#0c1024';
+    ctx.fillRect(0, 240, CANVAS_WIDTH, 40);
+    ctx.fillStyle = '#0EA5E9';
+    ctx.fillRect(0, 240, CANVAS_WIDTH, 4);
+    ctx.fillStyle = '#38BDF8';
+    ctx.fillRect(0, 240, CANVAS_WIDTH, 1.5);
+    drawRunner(ctx, 72, 214, 20, 'right', true, 0, 0, 0, 0);
+  }, [gameState]);
+
+  useEffect(() => {
+    return () => {
+      cleanupLoopRef.current?.();
+    };
+  }, []);
+
   const toggleSound = () => {
     const next = !soundEnabled;
     setSoundEnabled(next);
     audio.enabled = next;
   };
 
-  // keepScore: advancing to the next level carries the run score over; lives always refill.
-  const startGame = useCallback((levelIdx: number | 'daily', keepScore = false) => {
-    const day = dailyNumber();
-    const level = levelIdx === 'daily' ? dailyLevel(day) : LEVELS[levelIdx];
-    const startScore = keepScore ? stateRef.current.score : 0;
-    setGameState('playing');
-    if (levelIdx === 'daily') {
-      setDailyDay(day);
-    } else {
-      setDailyDay(null);
-      setLevelIndex(levelIdx);
-    }
-    setScore(startScore);
-    setLives(5);
-    stateRef.current.gameState = 'playing';
-    stateRef.current.score = startScore;
-    stateRef.current.lives = 5;
+  const setKey = (key: 'left' | 'right' | 'jump', pressed: boolean) => {
+    keysRef.current[key] = pressed;
+    setPadActive((prev) => (prev[key] === pressed ? prev : { ...prev, [key]: pressed }));
+  };
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  const startGame = useCallback(
+    (levelIdx: number | 'daily', keepScore = false) => {
+      cleanupLoopRef.current?.();
 
-    const CANVAS_WIDTH = 480;
-    const CANVAS_HEIGHT = 280;
-    const GRAVITY = 0.55;
-    const LEVEL_WIDTH = level.width;
+      const day = dailyNumber();
+      const level = levelIdx === 'daily' ? dailyLevel(day) : LEVELS[levelIdx];
+      const startScore = keepScore ? stateRef.current.score : 0;
 
-    const player = {
-      x: 60,
-      y: 180,
-      width: 20,
-      height: 26,
-      vx: 0,
-      vy: 0,
-      speed: 3.5,
-      jumpForce: -11.0,
-      grounded: false,
-      facing: 'right' as 'left' | 'right',
-      invulnerable: 0,
-      animTick: 0,
-    };
-
-    interface Platform {
-      x: number;
-      y: number;
-      w: number;
-      h: number;
-      type: PlatformType;
-      hit?: boolean;
-      shake?: number;
-      falling?: boolean;
-      fallSpeed?: number;
-    }
-
-    // Level data is shared and immutable; every run works on its own copies.
-    const platforms: Platform[] = level.platforms.map((p) => ({ ...p }));
-    const trollBlocks = level.trollBlocks.map((tb) => ({ ...tb, revealed: false }));
-    const coins = level.coins.map((c, i) => ({ ...c, collected: false, tick: i }));
-    const enemies = level.enemies.map((e) => ({ ...e, y: 220, w: 20, h: 20, alive: true }));
-
-    const flag = {
-      x: level.flagX,
-      y: 90,
-      w: 8,
-      h: 150,
-      reached: false,
-      flees: 0,
-    };
-
-    const particles: Particle[] = [];
-    const floatingTexts: FloatingText[] = [];
-
-    const spawnParticles = (x: number, y: number, color: string, count = 8) => {
-      for (let i = 0; i < count; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 3 + 1;
-        particles.push({
-          x,
-          y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed - 1,
-          color,
-          life: 25,
-        });
-      }
-    };
-
-    const spawnFloatingText = (x: number, y: number, text: string, color = '#FCD34D') => {
-      floatingTexts.push({ x, y, text, color, life: 35 });
-    };
-
-    let animationFrameId: number | null = null;
-    let cameraX = 0;
-
-    const recordDeath = (reason?: string) => {
-      stateRef.current.lives--;
-      setLives(stateRef.current.lives);
-      stateRef.current.deaths++;
-      setDeaths(stateRef.current.deaths);
-
-      const chosenReason = reason || TROLL_DEATH_MESSAGES[Math.floor(Math.random() * TROLL_DEATH_MESSAGES.length)];
-      stateRef.current.deathReason = chosenReason;
-      setDeathReason(chosenReason);
-
-      const deathKey = fid ? `fc_farbase_deaths_${fid}` : 'fc_farbase_deaths';
-      try {
-        localStorage.setItem(deathKey, stateRef.current.deaths.toString());
-      } catch {}
-
-      if (stateRef.current.lives <= 0) {
-        audio.gameOver();
-        endGame('gameover');
+      setGameState('playing');
+      if (levelIdx === 'daily') {
+        setDailyDay(day);
       } else {
-        audio.bonk();
-        let safeX = level.checkpoints[0];
-        for (const sx of level.checkpoints) {
-          if (sx <= player.x) {
-            safeX = sx;
+        setDailyDay(null);
+        setLevelIndex(levelIdx);
+      }
+      setScore(startScore);
+      setLives(5);
+      setProgressPct(0);
+      stateRef.current.gameState = 'playing';
+      stateRef.current.score = startScore;
+      stateRef.current.lives = 5;
+      stateRef.current.deathCause = 'pit';
+
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = setupHiDpiCanvas(canvas);
+      if (!ctx) return;
+
+      const reducedMotion =
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+      const GRAVITY = 0.55;
+      const LEVEL_WIDTH = level.width;
+      const finalGoalX = level.fleeTo.length ? level.fleeTo[level.fleeTo.length - 1] : level.flagX;
+
+      const player = {
+        x: 60,
+        y: 180,
+        width: 20,
+        height: 26,
+        vx: 0,
+        vy: 0,
+        speed: 3.5,
+        jumpForce: -11.0,
+        grounded: false,
+        wasGrounded: false,
+        facing: 'right' as 'left' | 'right',
+        invulnerable: 0,
+        animTick: 0,
+      };
+
+      interface Platform {
+        x: number;
+        y: number;
+        w: number;
+        h: number;
+        type: PlatformType;
+        hit?: boolean;
+        shake?: number;
+        falling?: boolean;
+        fallSpeed?: number;
+      }
+
+      const platforms: Platform[] = level.platforms.map((p) => ({ ...p }));
+      const trollBlocks = level.trollBlocks.map((tb) => ({ ...tb, revealed: false }));
+      const coins = level.coins.map((c, i) => ({ ...c, collected: false, tick: i * 4 }));
+      const enemies = level.enemies.map((e) => ({ ...e, y: 220, w: 20, h: 20, alive: true }));
+
+      const flag = {
+        x: level.flagX,
+        y: 90,
+        w: 8,
+        h: 150,
+        reached: false,
+        flees: 0,
+      };
+
+      const particles: Particle[] = [];
+      const floatingTexts: FloatingText[] = [];
+      let shakeTicks = 0;
+      let shakeMag = 0;
+      let worldTick = 0;
+      let pendingCause: DeathCause | null = null;
+
+      const triggerShake = (ticks: number, mag: number) => {
+        if (reducedMotion) return;
+        shakeTicks = Math.max(shakeTicks, ticks);
+        shakeMag = Math.max(shakeMag, mag);
+      };
+
+      const spawnParticles = (x: number, y: number, color: string, count = 8, size = 3) => {
+        if (reducedMotion) return;
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * 2.8 + 0.8;
+          const maxLife = 18 + Math.floor(Math.random() * 12);
+          particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 1,
+            color,
+            size,
+            life: maxLife,
+            maxLife,
+          });
+        }
+      };
+
+      const spawnDust = (x: number, y: number) => spawnParticles(x, y, '#94A3B8', 5, 2.5);
+
+      const spawnFloatingText = (x: number, y: number, text: string, color = '#FBBF24') => {
+        floatingTexts.push({ x, y, text, color, life: 38 });
+      };
+
+      let animationFrameId: number | null = null;
+      let victoryTimer: ReturnType<typeof setTimeout> | null = null;
+      let cameraX = 0;
+
+      const endGame = (outcome: 'gameover' | 'victory') => {
+        if (animationFrameId !== null) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+        if (victoryTimer !== null) {
+          clearTimeout(victoryTimer);
+          victoryTimer = null;
+        }
+        setGameState(outcome);
+        stateRef.current.gameState = outcome;
+
+        if (levelIdx === 'daily') {
+          const dayKey = fid ? `fc_farbase_daily_${day}_${fid}` : `fc_farbase_daily_${day}`;
+          try {
+            const prevBest = parseInt(localStorage.getItem(dayKey) || '0', 10) || 0;
+            if (stateRef.current.score > prevBest) {
+              localStorage.setItem(dayKey, stateRef.current.score.toString());
+            }
+            if (day === dailyNumber()) {
+              setDailyBest(Math.max(prevBest, stateRef.current.score));
+            }
+          } catch {}
+          onDailyRunEnd?.({ day, score: stateRef.current.score });
+        } else if (outcome === 'victory' && levelIdx + 1 < LEVELS.length) {
+          setUnlockedLevel((prev) => {
+            const next = Math.max(prev, levelIdx + 1);
+            try {
+              localStorage.setItem(unlockedKey, next.toString());
+            } catch {}
+            return next;
+          });
+        }
+
+        const finalScore = stateRef.current.score;
+        if (finalScore > stateRef.current.highScore) {
+          setHighScore(finalScore);
+          stateRef.current.highScore = finalScore;
+          const key = fid ? `fc_farbase_highscore_${fid}` : 'fc_farbase_highscore';
+          try {
+            localStorage.setItem(key, finalScore.toString());
+          } catch {}
+          onHighScoreChange?.(finalScore);
+        }
+      };
+
+      const recordDeath = (explicitCause?: DeathCause) => {
+        const cause = explicitCause ?? pendingCause ?? 'pit';
+        pendingCause = null;
+
+        stateRef.current.lives--;
+        setLives(stateRef.current.lives);
+        stateRef.current.deaths++;
+        setDeaths(stateRef.current.deaths);
+        stateRef.current.deathCause = cause;
+        setDeathCause(cause);
+        triggerShake(14, 5);
+
+        const deathKey = fid ? `fc_farbase_deaths_${fid}` : 'fc_farbase_deaths';
+        try {
+          localStorage.setItem(deathKey, stateRef.current.deaths.toString());
+        } catch {}
+
+        if (stateRef.current.lives <= 0) {
+          audio.gameOver();
+          endGame('gameover');
+        } else {
+          audio.bonk();
+          let safeX = level.checkpoints[0];
+          for (const sx of level.checkpoints) {
+            if (sx <= player.x) safeX = sx;
+          }
+          player.x = safeX;
+          player.y = 150;
+          player.vx = 0;
+          player.vy = 0;
+          player.grounded = false;
+          player.invulnerable = 120;
+        }
+      };
+
+      const FRAME_MS = 1000 / 60;
+      let lastNow: number | null = null;
+      let tickBudget = FRAME_MS;
+
+      const gameLoop = (now: number) => {
+        if (stateRef.current.gameState !== 'playing') return;
+        tickBudget = Math.min(tickBudget + (lastNow === null ? 0 : now - lastNow), FRAME_MS * 2);
+        lastNow = now;
+        if (tickBudget < FRAME_MS - 1) {
+          animationFrameId = requestAnimationFrame(gameLoop);
+          return;
+        }
+        tickBudget -= FRAME_MS;
+        worldTick++;
+
+        const tr = I18N[localeRef.current];
+        const keys = keysRef.current;
+
+        if (keys.left) {
+          player.vx = -player.speed;
+          player.facing = 'left';
+        } else if (keys.right) {
+          player.vx = player.speed;
+          player.facing = 'right';
+        } else {
+          player.vx *= 0.75;
+          if (Math.abs(player.vx) < 0.1) player.vx = 0;
+        }
+
+        if (keys.jump && player.grounded) {
+          player.vy = player.jumpForce;
+          player.grounded = false;
+          audio.jump();
+          spawnDust(player.x + player.width / 2, player.y + player.height);
+        }
+
+        player.vy += GRAVITY;
+        if (player.vy > 11) player.vy = 11;
+        if (player.invulnerable > 0) player.invulnerable--;
+
+        player.x += player.vx;
+        if (player.x < 0) player.x = 0;
+
+        for (const p of platforms) {
+          if (
+            player.x < p.x + p.w &&
+            player.x + player.width > p.x &&
+            player.y < p.y + p.h &&
+            player.y + player.height > p.y
+          ) {
+            if (player.vx > 0) player.x = p.x - player.width;
+            else if (player.vx < 0) player.x = p.x + p.w;
           }
         }
-        player.x = safeX;
-        player.y = 150;
-        player.vx = 0;
-        player.vy = 0;
+
+        for (const p of platforms) {
+          if (p.type === 'rugpull' || p.type === 'hollow_column') {
+            if (p.shake && p.shake > 0) {
+              p.shake--;
+              if (p.shake === 0) {
+                p.falling = true;
+                p.fallSpeed = 2;
+                audio.bonk();
+                triggerShake(8, 3);
+                pendingCause = p.type === 'hollow_column' ? 'hollow' : 'rugpull';
+                spawnFloatingText(
+                  p.x + p.w / 2,
+                  p.y - 12,
+                  p.type === 'hollow_column' ? tr.floatHollow : tr.floatRug,
+                  '#F43F5E'
+                );
+                spawnParticles(p.x + p.w / 2, p.y + p.h / 2, '#F43F5E', 10);
+              }
+            } else if (p.falling) {
+              p.fallSpeed = (p.fallSpeed || 2) + 0.6;
+              p.y += p.fallSpeed;
+            }
+          }
+        }
+
+        player.wasGrounded = player.grounded;
         player.grounded = false;
-        player.invulnerable = 120;
-      }
-    };
+        player.y += player.vy;
 
-    // Physics is tuned per frame at 60fps; cap the tick rate so 90/120Hz screens don't run the game faster.
-    const FRAME_MS = 1000 / 60;
-    let lastNow: number | null = null;
-    let tickBudget = FRAME_MS;
+        const hitQuestion = (p: Platform) => {
+          if (p.type !== 'question' || p.hit) return false;
+          p.hit = true;
+          audio.powerUp();
+          stateRef.current.score += POINTS.question;
+          setScore(stateRef.current.score);
+          spawnFloatingText(p.x + p.w / 2, p.y - 12, `+${POINTS.question}`, '#A78BFA');
+          spawnParticles(p.x + p.w / 2, p.y, '#FBBF24', 10);
+          return true;
+        };
 
-    const gameLoop = (now: number) => {
-      if (stateRef.current.gameState !== 'playing') return;
-      tickBudget = Math.min(tickBudget + (lastNow === null ? 0 : now - lastNow), FRAME_MS * 2);
-      lastNow = now;
-      if (tickBudget < FRAME_MS - 1) {
-        animationFrameId = requestAnimationFrame(gameLoop);
-        return;
-      }
-      tickBudget -= FRAME_MS;
-
-      const keys = keysRef.current;
-      if (keys.left) {
-        player.vx = -player.speed;
-        player.facing = 'left';
-      } else if (keys.right) {
-        player.vx = player.speed;
-        player.facing = 'right';
-      } else {
-        player.vx *= 0.75;
-        if (Math.abs(player.vx) < 0.1) player.vx = 0;
-      }
-
-      if (keys.jump && player.grounded) {
-        player.vy = player.jumpForce;
-        player.grounded = false;
-        audio.jump();
-      }
-
-      player.vy += GRAVITY;
-      if (player.vy > 11) player.vy = 11;
-
-      if (player.invulnerable > 0) player.invulnerable--;
-
-      player.x += player.vx;
-      if (player.x < 0) player.x = 0;
-
-      for (const p of platforms) {
-        if (
-          player.x < p.x + p.w &&
-          player.x + player.width > p.x &&
-          player.y < p.y + p.h &&
-          player.y + player.height > p.y
-        ) {
-          if (player.vx > 0) player.x = p.x - player.width;
-          else if (player.vx < 0) player.x = p.x + p.w;
-        }
-      }
-
-      for (const p of platforms) {
-        if (p.type === 'rugpull' || p.type === 'hollow_column') {
-          if (p.shake && p.shake > 0) {
-            p.shake--;
-            if (p.shake === 0) {
-              p.falling = true;
-              p.fallSpeed = 2;
-              audio.bonk();
-              spawnFloatingText(p.x + (p.type === 'hollow_column' ? -5 : 10), p.y - 15, p.type === 'hollow_column' ? 'HOLLOW! 🕳️' : 'RUG PULL! 📉', '#EF4444');
-              spawnParticles(p.x + p.w / 2, p.y + p.h / 2, '#EF4444', 10);
-            }
-          } else if (p.falling) {
-            p.fallSpeed = (p.fallSpeed || 2) + 0.6;
-            p.y += p.fallSpeed;
-          }
-        }
-      }
-
-      player.grounded = false;
-      player.y += player.vy;
-
-      for (const p of platforms) {
-        if (
-          player.x < p.x + p.w &&
-          player.x + player.width > p.x &&
-          player.y < p.y + p.h &&
-          player.y + player.height > p.y
-        ) {
-          if (player.vy > 0 && player.y + player.height - player.vy <= p.y + 4) {
-            player.y = p.y - player.height;
-            player.vy = 0;
-            player.grounded = true;
-
-            if (p.type === 'rugpull' && !p.falling && !p.shake) {
-              p.shake = 22;
-            }
-            if (p.type === 'hollow_column' && !p.falling && !p.shake) {
-              p.shake = 16;
-              stateRef.current.deathReason = 'Fell through a hollow trap column into the abyss! 🕳️';
-              setDeathReason('Fell through a hollow trap column into the abyss! 🕳️');
-            }
-            if (p.type === 'question' && !p.hit) {
-              p.hit = true;
-              audio.powerUp();
-              stateRef.current.score += POINTS.question;
-              setScore(stateRef.current.score);
-              spawnFloatingText(p.x, p.y - 15, `+${POINTS.question}`, '#855DCD');
-              spawnParticles(p.x + p.w / 2, p.y, '#FBBF24', 10);
-            }
-          } else if (player.vy < 0 && player.y - player.vy >= p.y + p.h - 6) {
-            player.y = p.y + p.h;
-            player.vy = 2;
-
-            if (p.type === 'question' && !p.hit) {
-              p.hit = true;
-              audio.powerUp();
-              stateRef.current.score += POINTS.question;
-              setScore(stateRef.current.score);
-              spawnFloatingText(p.x, p.y - 15, `+${POINTS.question}`, '#855DCD');
-              spawnParticles(p.x + p.w / 2, p.y, '#FBBF24', 10);
-            } else if (p.type === 'brick') {
-              audio.stomp();
-              spawnParticles(p.x + p.w / 2, p.y, '#C2410C', 4);
-            }
-          }
-        }
-      }
-
-      for (const tb of trollBlocks) {
-        if (
-          player.x < tb.x + tb.w &&
-          player.x + player.width > tb.x &&
-          player.y < tb.y + tb.h &&
-          player.y + player.height > tb.y
-        ) {
-          if (!tb.revealed) {
-            tb.revealed = true;
-            audio.bonk();
-            spawnFloatingText(tb.x, tb.y - 15, 'RUG PULL! 😈', '#EF4444');
-            spawnParticles(tb.x + tb.w / 2, tb.y + tb.h / 2, '#EF4444', 12);
-            stateRef.current.deathReason = tb.reason;
-            setDeathReason(tb.reason);
-            player.y = tb.y + tb.h;
-            player.vy = 5;
-            player.vx = 0;
-          } else {
-            if (player.vy > 0 && player.y + player.height - player.vy <= tb.y + 6) {
-              player.y = tb.y - player.height;
+        for (const p of platforms) {
+          if (
+            player.x < p.x + p.w &&
+            player.x + player.width > p.x &&
+            player.y < p.y + p.h &&
+            player.y + player.height > p.y
+          ) {
+            if (player.vy > 0 && player.y + player.height - player.vy <= p.y + 4) {
+              const impactVy = player.vy;
+              player.y = p.y - player.height;
               player.vy = 0;
               player.grounded = true;
-            } else if (player.vy < 0) {
-              player.y = tb.y + tb.h;
-              player.vy = 3;
-            } else {
-              if (player.vx > 0) player.x = tb.x - player.width;
-              else if (player.vx < 0) player.x = tb.x + tb.w;
+              if (!player.wasGrounded && impactVy > 4.5) {
+                spawnDust(player.x + player.width / 2, player.y + player.height);
+              }
+
+              if (p.type === 'rugpull' && !p.falling && !p.shake) {
+                p.shake = 22;
+                pendingCause = 'rugpull';
+              }
+              if (p.type === 'hollow_column' && !p.falling && !p.shake) {
+                p.shake = 16;
+                pendingCause = 'hollow';
+              }
+              hitQuestion(p);
+            } else if (player.vy < 0 && player.y - player.vy >= p.y + p.h - 6) {
+              player.y = p.y + p.h;
+              player.vy = 2;
+
+              if (!hitQuestion(p) && p.type === 'brick') {
+                audio.stomp();
+                spawnParticles(p.x + p.w / 2, p.y + p.h, '#818CF8', 4);
+              }
             }
           }
         }
-      }
 
-      if (player.y > CANVAS_HEIGHT + 30) {
-        recordDeath();
-        if (stateRef.current.gameState !== 'playing') return;
-      }
-
-      for (const coin of coins) {
-        if (!coin.collected) {
-          coin.tick++;
+        for (const tb of trollBlocks) {
           if (
-            player.x < coin.x + 16 &&
-            player.x + player.width > coin.x - 8 &&
-            player.y < coin.y + 16 &&
-            player.y + player.height > coin.y - 8
+            player.x < tb.x + tb.w &&
+            player.x + player.width > tb.x &&
+            player.y < tb.y + tb.h &&
+            player.y + player.height > tb.y
           ) {
-            coin.collected = true;
-
-            if (coin.type === 'fake_airdrop') {
+            if (!tb.revealed) {
+              tb.revealed = true;
               audio.bonk();
-              stateRef.current.score = Math.max(0, stateRef.current.score - POINTS.fakePenalty);
-              setScore(stateRef.current.score);
-              spawnFloatingText(coin.x, coin.y - 15, `SCAM AIRDROP! 🤡 -${POINTS.fakePenalty}`, '#EF4444');
-              spawnParticles(coin.x, coin.y, '#EF4444', 15);
-              player.vx = player.facing === 'right' ? -8 : 8;
-              player.vy = -6;
-              stateRef.current.deathReason = 'Greedily grabbed a scam 10K$ airdrop coin! 🤡';
-              setDeathReason('Greedily grabbed a scam 10K$ airdrop coin! 🤡');
+              triggerShake(10, 4);
+              pendingCause = tb.gas ? 'gas' : 'invisible';
+              spawnFloatingText(tb.x + tb.w / 2, tb.y - 12, tr.floatTrap, '#F43F5E');
+              spawnParticles(tb.x + tb.w / 2, tb.y + tb.h / 2, '#F43F5E', 12);
+              player.y = tb.y + tb.h;
+              player.vy = 5;
+              player.vx = 0;
             } else {
-              audio.coin();
-              const gain = POINTS[coin.type];
-              stateRef.current.score += gain;
-              setScore(stateRef.current.score);
-              spawnFloatingText(coin.x, coin.y - 10, `+${gain}`, coin.type === 'farcaster' ? '#C084FC' : '#60A5FA');
-              spawnParticles(coin.x, coin.y, coin.type === 'farcaster' ? '#9333EA' : '#0052FF', 8);
+              if (player.vy > 0 && player.y + player.height - player.vy <= tb.y + 6) {
+                player.y = tb.y - player.height;
+                player.vy = 0;
+                player.grounded = true;
+              } else if (player.vy < 0) {
+                player.y = tb.y + tb.h;
+                player.vy = 3;
+              } else {
+                if (player.vx > 0) player.x = tb.x - player.width;
+                else if (player.vx < 0) player.x = tb.x + tb.w;
+              }
             }
           }
         }
-      }
 
-      for (const enemy of enemies) {
-        if (enemy.alive) {
-          enemy.x += enemy.vx;
-          if (enemy.x <= enemy.rangeStart || enemy.x >= enemy.rangeEnd) {
-            enemy.vx *= -1;
-          }
+        if (player.y > CANVAS_HEIGHT + 30) {
+          recordDeath();
+          if (stateRef.current.gameState !== 'playing') return;
+        }
 
-          if (
-            player.x < enemy.x + enemy.w &&
-            player.x + player.width > enemy.x &&
-            player.y < enemy.y + enemy.h &&
-            player.y + player.height > enemy.y
-          ) {
-            if (player.vy > 0 && player.y + player.height - player.vy <= enemy.y + 8) {
-              enemy.alive = false;
-              player.vy = -7;
-              audio.stomp();
-              stateRef.current.score += POINTS.stomp;
-              setScore(stateRef.current.score);
-              spawnFloatingText(enemy.x, enemy.y - 10, `+${POINTS.stomp} STOMP!`, '#34D399');
-              spawnParticles(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#EF4444', 12);
-            } else if (player.invulnerable <= 0) {
-              recordDeath('Liquidated by the FUD market cap monster! 🐻');
-              if (stateRef.current.gameState !== 'playing') return;
+        for (const coin of coins) {
+          if (!coin.collected) {
+            coin.tick++;
+            if (
+              player.x < coin.x + 16 &&
+              player.x + player.width > coin.x - 8 &&
+              player.y < coin.y + 16 &&
+              player.y + player.height > coin.y - 8
+            ) {
+              coin.collected = true;
+
+              if (coin.type === 'fake_airdrop') {
+                audio.bonk();
+                triggerShake(9, 3.5);
+                pendingCause = 'scam';
+                stateRef.current.score = Math.max(0, stateRef.current.score - POINTS.fakePenalty);
+                setScore(stateRef.current.score);
+                spawnFloatingText(coin.x, coin.y - 14, tr.floatScam(POINTS.fakePenalty), '#F43F5E');
+                spawnParticles(coin.x, coin.y, '#F43F5E', 14);
+                player.vx = player.facing === 'right' ? -8 : 8;
+                player.vy = -6;
+              } else {
+                audio.coin();
+                const gain = POINTS[coin.type];
+                stateRef.current.score += gain;
+                setScore(stateRef.current.score);
+                spawnFloatingText(
+                  coin.x,
+                  coin.y - 10,
+                  `+${gain}`,
+                  coin.type === 'farcaster' ? '#D8B4FE' : '#7DD3FC'
+                );
+                spawnParticles(
+                  coin.x,
+                  coin.y,
+                  coin.type === 'farcaster' ? '#A855F7' : '#38BDF8',
+                  8
+                );
+              }
             }
           }
         }
-      }
 
-      if (flag.flees < level.fleeTo.length && player.x + player.width >= flag.x - 40) {
-        spawnFloatingText(flag.x, 110, 'NOT YET! DYOR! 🏃💨', '#FBBF24');
-        spawnParticles(flag.x, 120, '#FBBF24', 15);
-        flag.x = level.fleeTo[flag.flees];
-        flag.flees++;
-        audio.bonk();
-      } else if (player.x + player.width >= flag.x && !flag.reached) {
-        flag.reached = true;
-        audio.powerUp();
-        stateRef.current.score += POINTS.flag;
-        setScore(stateRef.current.score);
-        spawnFloatingText(flag.x, flag.y, `+${POINTS.flag} REAL GOAL! 🏆`, '#FBBF24');
-        setTimeout(() => {
-          endGame('victory');
-        }, 800);
-      }
+        for (const enemy of enemies) {
+          if (enemy.alive) {
+            enemy.x += enemy.vx;
+            if (enemy.x <= enemy.rangeStart || enemy.x >= enemy.rangeEnd) {
+              enemy.vx *= -1;
+            }
 
-      cameraX = Math.max(0, Math.min(LEVEL_WIDTH - CANVAS_WIDTH, player.x - CANVAS_WIDTH / 3));
-
-      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-      const skyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
-      skyGrad.addColorStop(0, '#0f172a');
-      skyGrad.addColorStop(1, '#1e1b4b');
-      ctx.fillStyle = skyGrad;
-      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-      const cloudOffset = (cameraX * 0.3) % 200;
-      for (let cx = -50 - cloudOffset; cx < CANVAS_WIDTH + 100; cx += 160) {
-        ctx.beginPath();
-        ctx.arc(cx, 50, 24, 0, Math.PI * 2);
-        ctx.arc(cx + 25, 45, 30, 0, Math.PI * 2);
-        ctx.arc(cx + 50, 50, 20, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.save();
-      ctx.translate(-cameraX, 0);
-
-      for (const p of platforms) {
-        if (p.x + p.w < cameraX - 20 || p.x > cameraX + CANVAS_WIDTH + 20) continue;
-
-        if (p.type === 'ground') {
-          ctx.fillStyle = '#0052FF';
-          ctx.fillRect(p.x, p.y, p.w, 8);
-          ctx.fillStyle = '#0f172a';
-          ctx.fillRect(p.x, p.y + 8, p.w, p.h - 8);
-          ctx.strokeStyle = '#1e293b';
-          ctx.strokeRect(p.x, p.y, p.w, p.h);
-        } else if (p.type === 'rugpull') {
-          const jitterX = p.shake ? (Math.random() - 0.5) * 6 : 0;
-          ctx.fillStyle = p.falling ? '#EF4444' : p.shake ? '#DC2626' : '#855DCD';
-          ctx.fillRect(p.x + jitterX, p.y, p.w, p.h);
-          ctx.strokeStyle = p.shake ? '#B91C1C' : '#4C1D95';
-          ctx.strokeRect(p.x + jitterX, p.y, p.w, p.h);
-          ctx.fillStyle = '#FFFFFF';
-          ctx.font = 'bold 10px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText(p.falling ? 'RUG!' : p.shake ? 'RUN!' : 'SAFE', p.x + p.w / 2 + jitterX, p.y + p.h / 2 + 3);
-        } else if (p.type === 'pipe' || p.type === 'hollow_column') {
-          const jitterX = p.shake ? (Math.random() - 0.5) * 4 : 0;
-          ctx.fillStyle = p.falling ? '#047857' : '#059669';
-          ctx.fillRect(p.x + jitterX, p.y, p.w, p.h);
-          ctx.fillStyle = p.falling ? '#065F46' : '#10B981';
-          ctx.fillRect(p.x - 3 + jitterX, p.y, p.w + 6, 10);
-          ctx.strokeStyle = '#064E3B';
-          ctx.strokeRect(p.x - 3 + jitterX, p.y, p.w + 6, 10);
-        } else if (p.type === 'question') {
-          ctx.fillStyle = p.hit ? '#4B5563' : '#F59E0B';
-          ctx.fillRect(p.x, p.y, p.w, p.h);
-          ctx.strokeStyle = '#78350F';
-          ctx.strokeRect(p.x, p.y, p.w, p.h);
-          ctx.fillStyle = '#FFFFFF';
-          ctx.font = 'bold 13px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText(p.hit ? '•' : '?', p.x + p.w / 2, p.y + p.h / 2 + 5);
-        } else if (p.type === 'brick') {
-          ctx.fillStyle = '#855DCD';
-          ctx.fillRect(p.x, p.y, p.w, p.h);
-          ctx.strokeStyle = '#4C1D95';
-          ctx.strokeRect(p.x, p.y, p.w, p.h);
-          ctx.fillStyle = '#6D28D9';
-          ctx.fillRect(p.x + 2, p.y + 2, p.w - 4, p.h / 2 - 2);
+            if (
+              player.x < enemy.x + enemy.w &&
+              player.x + player.width > enemy.x &&
+              player.y < enemy.y + enemy.h &&
+              player.y + player.height > enemy.y
+            ) {
+              if (player.vy > 0 && player.y + player.height - player.vy <= enemy.y + 8) {
+                enemy.alive = false;
+                player.vy = -7;
+                audio.stomp();
+                triggerShake(5, 2);
+                stateRef.current.score += POINTS.stomp;
+                setScore(stateRef.current.score);
+                spawnFloatingText(enemy.x + 10, enemy.y - 10, tr.floatStomp(POINTS.stomp), '#34D399');
+                spawnParticles(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#F43F5E', 12);
+              } else if (player.invulnerable <= 0) {
+                recordDeath('fud');
+                if (stateRef.current.gameState !== 'playing') return;
+              }
+            }
+          }
         }
-      }
 
-      for (const tb of trollBlocks) {
-        if (tb.revealed && tb.x > cameraX - 20 && tb.x < cameraX + CANVAS_WIDTH + 20) {
-          ctx.fillStyle = '#991B1B';
-          ctx.fillRect(tb.x, tb.y, tb.w, tb.h);
-          ctx.strokeStyle = '#EF4444';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(tb.x, tb.y, tb.w, tb.h);
-          ctx.lineWidth = 1;
-          ctx.fillStyle = '#FFFFFF';
-          ctx.font = 'bold 12px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(tb.label, tb.x + tb.w / 2, tb.y + tb.h / 2 + 4);
+        if (flag.flees < level.fleeTo.length && player.x + player.width >= flag.x - 40) {
+          spawnFloatingText(flag.x, 108, tr.floatFakeFlag, '#FBBF24');
+          spawnParticles(flag.x, 120, '#FBBF24', 15);
+          triggerShake(7, 2.5);
+          flag.x = level.fleeTo[flag.flees];
+          flag.flees++;
+          audio.bonk();
+        } else if (player.x + player.width >= flag.x && !flag.reached) {
+          flag.reached = true;
+          audio.powerUp();
+          stateRef.current.score += POINTS.flag;
+          setScore(stateRef.current.score);
+          setProgressPct(100);
+          spawnFloatingText(flag.x, flag.y - 6, tr.floatGoal(POINTS.flag), '#FBBF24');
+          spawnParticles(flag.x + 4, flag.y + 24, '#38BDF8', 18);
+          victoryTimer = setTimeout(() => {
+            endGame('victory');
+          }, 750);
         }
-      }
 
-      for (const coin of coins) {
-        if (!coin.collected && coin.x > cameraX - 20 && coin.x < cameraX + CANVAS_WIDTH + 20) {
-          const bounce = Math.sin(coin.tick * 0.1) * 3;
-          ctx.save();
-          ctx.translate(coin.x, coin.y + bounce);
+        if (worldTick % 6 === 0 && !flag.reached) {
+          const pct = Math.min(99, Math.max(0, Math.round((player.x / finalGoalX) * 100)));
+          setProgressPct(pct);
+        }
 
-          if (coin.type === 'fake_airdrop') {
-            ctx.fillStyle = '#F59E0B';
+        if (player.grounded && Math.abs(player.vx) > 0.5) {
+          player.animTick = (player.animTick + 0.24) % 4;
+        }
+
+        cameraX = Math.max(0, Math.min(LEVEL_WIDTH - CANVAS_WIDTH, player.x - CANVAS_WIDTH / 3));
+
+        let shakeX = 0;
+        let shakeY = 0;
+        if (shakeTicks > 0) {
+          shakeX = (Math.random() - 0.5) * shakeMag * 2;
+          shakeY = (Math.random() - 0.5) * shakeMag * 1.4;
+          shakeTicks--;
+          if (shakeTicks === 0) shakeMag = 0;
+        }
+
+        ctx.save();
+        ctx.translate(shakeX, shakeY);
+        drawBackdrop(ctx, cameraX, worldTick, reducedMotion);
+
+        ctx.save();
+        ctx.translate(-cameraX, 0);
+
+        // Platforms
+        for (const p of platforms) {
+          if (p.x + p.w < cameraX - 24 || p.x > cameraX + CANVAS_WIDTH + 24) continue;
+
+          if (p.type === 'ground') {
+            ctx.fillStyle = '#0b0f22';
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+
+            // Tech deck grid ticks
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
             ctx.beginPath();
-            ctx.arc(0, 0, 11, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#EF4444';
-            ctx.lineWidth = 2;
+            for (let gx = p.x + 24; gx < p.x + p.w; gx += 28) {
+              ctx.moveTo(gx, p.y + 6);
+              ctx.lineTo(gx, p.y + p.h);
+            }
+            ctx.stroke();
+
+            // Glowing Base top rail
+            ctx.fillStyle = '#0284C7';
+            ctx.fillRect(p.x, p.y, p.w, 6);
+            ctx.fillStyle = '#38BDF8';
+            ctx.fillRect(p.x, p.y, p.w, 2);
+
+            // Side edge highlights on pit borders
+            ctx.fillStyle = '#1E293B';
+            ctx.fillRect(p.x, p.y + 6, 2, p.h - 6);
+            ctx.fillRect(p.x + p.w - 2, p.y + 6, 2, p.h - 6);
+          } else if (p.type === 'rugpull') {
+            const jitterX = p.shake && !reducedMotion ? (Math.random() - 0.5) * 5 : 0;
+            const danger = Boolean(p.falling || p.shake);
+            ctx.fillStyle = danger ? '#BE123C' : '#5B21B6';
+            ctx.fillRect(p.x + jitterX, p.y, p.w, p.h);
+            ctx.fillStyle = danger ? '#FB7185' : '#A78BFA';
+            ctx.fillRect(p.x + jitterX, p.y, p.w, 3);
+            ctx.strokeStyle = danger ? '#F43F5E' : '#7C3AED';
+            ctx.strokeRect(p.x + jitterX + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 9px ui-sans-serif, system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(
+              p.falling ? tr.tagRug : p.shake ? tr.tagRun : tr.tagSafe,
+              p.x + p.w / 2 + jitterX,
+              p.y + p.h / 2 + 3.5
+            );
+          } else if (p.type === 'pipe' || p.type === 'hollow_column') {
+            const jitterX = p.shake && !reducedMotion ? (Math.random() - 0.5) * 4 : 0;
+            const px = p.x + jitterX;
+            const warn = Boolean(p.falling || p.shake);
+            ctx.fillStyle = warn ? '#9F1239' : '#065F46';
+            ctx.fillRect(px, p.y + 9, p.w, p.h - 9);
+            // Specular highlight bar
+            ctx.fillStyle = warn ? '#FB7185' : '#34D399';
+            ctx.fillRect(px + 5, p.y + 9, 5, p.h - 9);
+            // Rim cap
+            ctx.fillStyle = warn ? '#E11D48' : '#10B981';
+            ctx.fillRect(px - 3, p.y, p.w + 6, 10);
+            ctx.strokeStyle = warn ? '#FDA4AF' : '#6EE7B7';
+            ctx.strokeRect(px - 2.5, p.y + 0.5, p.w + 5, 9);
+          } else if (p.type === 'question') {
+            if (p.hit) {
+              ctx.fillStyle = '#1E293B';
+              ctx.fillRect(p.x, p.y, p.w, p.h);
+              ctx.strokeStyle = '#475569';
+              ctx.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
+              ctx.fillStyle = '#64748B';
+              ctx.fillRect(p.x + p.w / 2 - 2, p.y + p.h / 2 - 2, 4, 4);
+            } else {
+              const pulse = reducedMotion ? 0 : Math.sin(worldTick * 0.12) * 15;
+              ctx.fillStyle = pulse > 0 ? '#FBBF24' : '#F59E0B';
+              ctx.fillRect(p.x, p.y, p.w, p.h);
+              ctx.fillStyle = '#FEF3C7';
+              ctx.fillRect(p.x + 2, p.y + 2, p.w - 4, 3);
+              ctx.strokeStyle = '#B45309';
+              ctx.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
+              ctx.fillStyle = '#1E1B4B';
+              ctx.font = '900 13px monospace';
+              ctx.textAlign = 'center';
+              ctx.fillText('?', p.x + p.w / 2, p.y + p.h / 2 + 5);
+            }
+          } else if (p.type === 'brick') {
+            ctx.fillStyle = '#312E81';
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+            ctx.fillStyle = '#6366F1';
+            ctx.fillRect(p.x + 1, p.y + 1, p.w - 2, 3);
+            ctx.strokeStyle = '#4338CA';
+            ctx.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
+            // Rivets
+            ctx.fillStyle = '#A5B4FC';
+            ctx.fillRect(p.x + 3, p.y + 4, 2, 2);
+            ctx.fillRect(p.x + p.w - 5, p.y + 4, 2, 2);
+          }
+        }
+
+        // Revealed hidden trap blocks (vector hazard box, no emoji)
+        for (const tb of trollBlocks) {
+          if (tb.revealed && tb.x > cameraX - 24 && tb.x < cameraX + CANVAS_WIDTH + 24) {
+            ctx.fillStyle = '#7F1D1D';
+            ctx.fillRect(tb.x, tb.y, tb.w, tb.h);
+            ctx.strokeStyle = '#F43F5E';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(tb.x + 0.5, tb.y + 0.5, tb.w - 1, tb.h - 1);
+            ctx.beginPath();
+            ctx.moveTo(tb.x + 3, tb.y + 3);
+            ctx.lineTo(tb.x + tb.w - 3, tb.y + tb.h - 3);
+            ctx.moveTo(tb.x + tb.w - 3, tb.y + 3);
+            ctx.lineTo(tb.x + 3, tb.y + tb.h - 3);
             ctx.stroke();
             ctx.lineWidth = 1;
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 8px monospace';
-            ctx.textAlign = 'center';
-            ctx.fillText('10K$', 0, 3);
-          } else if (coin.type === 'farcaster') {
-            ctx.fillStyle = '#855DCD';
-            ctx.beginPath();
-            ctx.arc(0, 0, 9, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 10px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('🟣', 0, 4);
-          } else {
-            ctx.fillStyle = '#0052FF';
-            ctx.beginPath();
-            ctx.arc(0, 0, 8, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#FFFFFF';
-            ctx.beginPath();
-            ctx.arc(0, 0, 4, 0, Math.PI * 2);
-            ctx.fill();
           }
-          ctx.restore();
         }
-      }
 
-      for (const enemy of enemies) {
-        if (enemy.alive && enemy.x > cameraX - 30 && enemy.x < cameraX + CANVAS_WIDTH + 30) {
-          ctx.fillStyle = '#DC2626';
-          ctx.beginPath();
-          ctx.arc(enemy.x + enemy.w / 2, enemy.y + 8, 10, Math.PI, 0);
-          ctx.lineTo(enemy.x + enemy.w, enemy.y + enemy.h);
-          ctx.lineTo(enemy.x, enemy.y + enemy.h);
-          ctx.fill();
+        // Collectibles (vector orbs/gems, no emoji)
+        for (const coin of coins) {
+          if (!coin.collected && coin.x > cameraX - 24 && coin.x < cameraX + CANVAS_WIDTH + 24) {
+            const bounce = reducedMotion ? 0 : Math.sin(coin.tick * 0.1) * 2.8;
+            ctx.save();
+            ctx.translate(coin.x, coin.y + bounce);
 
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(enemy.x + 3, enemy.y + 6, 4, 4);
-          ctx.fillRect(enemy.x + 13, enemy.y + 6, 4, 4);
-          ctx.fillStyle = '#000000';
-          ctx.fillRect(enemy.x + (enemy.vx > 0 ? 5 : 3), enemy.y + 7, 2, 2);
-          ctx.fillRect(enemy.x + (enemy.vx > 0 ? 15 : 13), enemy.y + 7, 2, 2);
+            if (coin.type === 'fake_airdrop') {
+              ctx.fillStyle = 'rgba(244, 63, 94, 0.24)';
+              ctx.beginPath();
+              ctx.arc(0, 0, 13, 0, Math.PI * 2);
+              ctx.fill();
 
-          ctx.fillStyle = '#FEF2F2';
-          ctx.font = 'bold 8px sans-serif';
+              ctx.fillStyle = '#F59E0B';
+              ctx.beginPath();
+              ctx.arc(0, 0, 10, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.strokeStyle = '#F43F5E';
+              ctx.lineWidth = 2;
+              ctx.stroke();
+              ctx.lineWidth = 1;
+
+              ctx.fillStyle = '#1E1B4B';
+              ctx.font = 'bold 7.5px monospace';
+              ctx.textAlign = 'center';
+              ctx.fillText('10K', 0, 2.8);
+            } else if (coin.type === 'farcaster') {
+              // Violet diamond gem
+              ctx.fillStyle = 'rgba(168, 85, 247, 0.25)';
+              ctx.beginPath();
+              ctx.arc(0, 0, 12, 0, Math.PI * 2);
+              ctx.fill();
+
+              ctx.fillStyle = '#9333EA';
+              ctx.beginPath();
+              ctx.moveTo(0, -10);
+              ctx.lineTo(9, 0);
+              ctx.lineTo(0, 10);
+              ctx.lineTo(-9, 0);
+              ctx.closePath();
+              ctx.fill();
+
+              ctx.fillStyle = '#E9D5FF';
+              ctx.beginPath();
+              ctx.moveTo(0, -5);
+              ctx.lineTo(4.5, 0);
+              ctx.lineTo(0, 5);
+              ctx.lineTo(-4.5, 0);
+              ctx.closePath();
+              ctx.fill();
+            } else {
+              // Base cyber orb
+              ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
+              ctx.beginPath();
+              ctx.arc(0, 0, 11, 0, Math.PI * 2);
+              ctx.fill();
+
+              ctx.fillStyle = '#0284C7';
+              ctx.beginPath();
+              ctx.arc(0, 0, 8, 0, Math.PI * 2);
+              ctx.fill();
+
+              ctx.strokeStyle = '#E0F2FE';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.arc(0, 0, 4, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.lineWidth = 1;
+            }
+            ctx.restore();
+          }
+        }
+
+        // Enemies (FUD Bots)
+        for (const enemy of enemies) {
+          if (enemy.alive && enemy.x > cameraX - 30 && enemy.x < cameraX + CANVAS_WIDTH + 30) {
+            const ex = enemy.x;
+            const ey = enemy.y;
+            const dir = enemy.vx >= 0 ? 1 : -1;
+
+            // Horns
+            ctx.fillStyle = '#FCA5A5';
+            ctx.beginPath();
+            ctx.moveTo(ex + 2, ey + 5);
+            ctx.lineTo(ex - 1, ey - 1);
+            ctx.lineTo(ex + 6, ey + 3);
+            ctx.moveTo(ex + enemy.w - 2, ey + 5);
+            ctx.lineTo(ex + enemy.w + 1, ey - 1);
+            ctx.lineTo(ex + enemy.w - 6, ey + 3);
+            ctx.fill();
+
+            // Body dome
+            ctx.fillStyle = '#DC2626';
+            ctx.beginPath();
+            ctx.arc(ex + enemy.w / 2, ey + 9, 10, Math.PI, 0);
+            ctx.lineTo(ex + enemy.w, ey + enemy.h - 2);
+            ctx.lineTo(ex, ey + enemy.h - 2);
+            ctx.closePath();
+            ctx.fill();
+
+            // Dark visor + glowing eyes
+            ctx.fillStyle = '#1E1B4B';
+            ctx.fillRect(ex + 2, ey + 5, enemy.w - 4, 6);
+            ctx.fillStyle = '#FDE047';
+            ctx.fillRect(ex + 4 + dir, ey + 6.5, 3.5, 3);
+            ctx.fillRect(ex + 12 + dir, ey + 6.5, 3.5, 3);
+
+            // Treads
+            const step = reducedMotion ? 0 : Math.sin(worldTick * 0.3) * 1.5;
+            ctx.fillStyle = '#7F1D1D';
+            ctx.fillRect(ex + 1, ey + enemy.h - 3, 7, 3);
+            ctx.fillRect(ex + 12, ey + enemy.h - 3 + step * 0.3, 7, 3);
+
+            ctx.fillStyle = '#FEE2E2';
+            ctx.font = 'bold 7px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('FUD', ex + enemy.w / 2, ey + 16.5);
+          }
+        }
+
+        // Goal Beacon Flagpole
+        const beaconColor = flag.flees > 0 ? '#F43F5E' : '#38BDF8';
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
+        ctx.fillRect(flag.x - 2, flag.y, flag.w + 4, flag.h);
+        ctx.fillStyle = '#CBD5E1';
+        ctx.fillRect(flag.x + 2, flag.y, 4, flag.h);
+
+        // Apex orb
+        ctx.fillStyle = '#FBBF24';
+        ctx.beginPath();
+        ctx.arc(flag.x + 4, flag.y, 6.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Neon pennant
+        const flutter = reducedMotion ? 0 : Math.sin(worldTick * 0.15) * 3;
+        ctx.fillStyle = beaconColor;
+        ctx.beginPath();
+        ctx.moveTo(flag.x + 6, flag.y + 8);
+        ctx.lineTo(flag.x + 42, flag.y + 22 + flutter);
+        ctx.lineTo(flag.x + 6, flag.y + 36);
+        ctx.closePath();
+        ctx.fill();
+
+        // Runner
+        if (player.invulnerable % 8 < 5) {
+          drawRunner(
+            ctx,
+            player.x,
+            player.y,
+            player.width,
+            player.facing,
+            player.grounded,
+            player.vx,
+            player.vy,
+            player.animTick,
+            player.invulnerable
+          );
+        }
+
+        // Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const pt = particles[i];
+          pt.x += pt.vx;
+          pt.y += pt.vy;
+          pt.life--;
+          ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+          ctx.fillStyle = pt.color;
+          ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
+          if (pt.life <= 0) particles.splice(i, 1);
+        }
+        ctx.globalAlpha = 1;
+
+        // Floating combat text
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+          const ft = floatingTexts[i];
+          ft.y -= 0.75;
+          ft.life--;
+          ctx.globalAlpha = Math.min(1, ft.life / 14);
+          ctx.font = 'bold 11px ui-sans-serif, system-ui, sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText('FUD', enemy.x + enemy.w / 2, enemy.y + enemy.h - 2);
+          ctx.strokeStyle = 'rgba(7, 8, 18, 0.85)';
+          ctx.lineWidth = 3;
+          ctx.strokeText(ft.text, ft.x, ft.y);
+          ctx.fillStyle = ft.color;
+          ctx.fillText(ft.text, ft.x, ft.y);
+          ctx.lineWidth = 1;
+          if (ft.life <= 0) floatingTexts.splice(i, 1);
         }
-      }
-
-      ctx.fillStyle = '#94A3B8';
-      ctx.fillRect(flag.x, flag.y, flag.w, flag.h);
-      ctx.fillStyle = '#EAB308';
-      ctx.beginPath();
-      ctx.arc(flag.x + flag.w / 2, flag.y, 6, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = flag.flees > 0 ? '#DC2626' : '#0052FF';
-      ctx.beginPath();
-      ctx.moveTo(flag.x + flag.w, flag.y + 10);
-      ctx.lineTo(flag.x + flag.w + 35, flag.y + 25);
-      ctx.lineTo(flag.x + flag.w, flag.y + 40);
-      ctx.fill();
-
-      if (player.invulnerable % 8 < 4) {
-        ctx.save();
-        ctx.translate(player.x, player.y);
-        if (player.facing === 'left') {
-          ctx.translate(player.width, 0);
-          ctx.scale(-1, 1);
-        }
-
-        ctx.fillStyle = '#855DCD';
-        ctx.fillRect(2, 0, 16, 6);
-        ctx.fillRect(6, 2, 14, 4);
-
-        ctx.fillStyle = '#FDE047';
-        ctx.fillRect(4, 6, 12, 7);
-        ctx.fillStyle = '#1E1B4B';
-        ctx.fillRect(12, 7, 3, 3);
-        ctx.fillStyle = '#451A03';
-        ctx.fillRect(10, 11, 7, 2);
-
-        ctx.fillStyle = '#0052FF';
-        ctx.fillRect(3, 13, 14, 8);
-        ctx.fillStyle = '#855DCD';
-        ctx.fillRect(6, 13, 3, 8);
-        ctx.fillRect(12, 13, 3, 8);
-
-        ctx.fillStyle = '#78350F';
-        if (player.grounded && Math.abs(player.vx) > 0.5) {
-          player.animTick = (player.animTick + 0.25) % 4;
-          const legOffset = Math.sin(player.animTick * Math.PI) * 3;
-          ctx.fillRect(2 + legOffset, 21, 6, 5);
-          ctx.fillRect(11 - legOffset, 21, 6, 5);
-        } else {
-          ctx.fillRect(2, 21, 6, 5);
-          ctx.fillRect(11, 21, 6, 5);
-        }
+        ctx.globalAlpha = 1;
 
         ctx.restore();
-      }
+        ctx.restore();
 
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const pt = particles[i];
-        pt.x += pt.vx;
-        pt.y += pt.vy;
-        pt.life--;
-        ctx.fillStyle = pt.color;
-        ctx.fillRect(pt.x, pt.y, 3, 3);
-        if (pt.life <= 0) particles.splice(i, 1);
-      }
+        if (stateRef.current.gameState === 'playing') {
+          animationFrameId = requestAnimationFrame(gameLoop);
+        }
+      };
 
-      for (let i = floatingTexts.length - 1; i >= 0; i--) {
-        const ft = floatingTexts[i];
-        ft.y -= 0.8;
-        ft.life--;
-        ctx.fillStyle = ft.color;
-        ctx.font = 'bold 12px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText(ft.text, ft.x, ft.y);
-        if (ft.life <= 0) floatingTexts.splice(i, 1);
-      }
+      animationFrameId = requestAnimationFrame(gameLoop);
 
-      ctx.restore();
-
-      if (stateRef.current.gameState === 'playing') {
-        animationFrameId = requestAnimationFrame(gameLoop);
-      }
-    };
-
-    const endGame = (outcome: 'gameover' | 'victory') => {
-      if (animationFrameId !== null) {
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
-      }
-      setGameState(outcome);
-      stateRef.current.gameState = outcome;
-
-      if (levelIdx === 'daily') {
-        const dayKey = fid ? `fc_farbase_daily_${day}_${fid}` : `fc_farbase_daily_${day}`;
-        try {
-          const prevBest = parseInt(localStorage.getItem(dayKey) || '0', 10) || 0;
-          if (stateRef.current.score > prevBest) localStorage.setItem(dayKey, stateRef.current.score.toString());
-          if (day === dailyNumber()) setDailyBest(Math.max(prevBest, stateRef.current.score));
-        } catch {}
-        onDailyRunEnd?.({ day, score: stateRef.current.score });
-      } else if (outcome === 'victory' && levelIdx + 1 < LEVELS.length) {
-        setUnlockedLevel((prev) => {
-          const next = Math.max(prev, levelIdx + 1);
-          try {
-            localStorage.setItem(unlockedKey, next.toString());
-          } catch {}
-          return next;
-        });
-      }
-
-      const finalScore = stateRef.current.score;
-      if (finalScore > stateRef.current.highScore) {
-        setHighScore(finalScore);
-        stateRef.current.highScore = finalScore;
-        const key = fid ? `fc_farbase_highscore_${fid}` : 'fc_farbase_highscore';
-        try {
-          localStorage.setItem(key, finalScore.toString());
-        } catch {}
-        onHighScoreChange?.(finalScore);
-      }
-    };
-
-    animationFrameId = requestAnimationFrame(gameLoop);
-
-    return () => {
-      if (animationFrameId !== null) {
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
-      }
-    };
-  }, [fid, onHighScoreChange, onDailyRunEnd, unlockedKey]);
+      const cleanup = () => {
+        if (animationFrameId !== null) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+        if (victoryTimer !== null) {
+          clearTimeout(victoryTimer);
+          victoryTimer = null;
+        }
+      };
+      cleanupLoopRef.current = cleanup;
+      return cleanup;
+    },
+    [fid, onHighScoreChange, onDailyRunEnd, unlockedKey]
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) keysRef.current.left = true;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) keysRef.current.right = true;
+      if (e.code === 'Escape' && showGuide) {
+        setShowGuide(false);
+        return;
+      }
+      if (e.code === 'KeyR' && stateRef.current.gameState === 'playing') {
+        startGame(dailyDay !== null ? 'daily' : levelIndex);
+        return;
+      }
+      if (['ArrowLeft', 'KeyA'].includes(e.code)) setKey('left', true);
+      if (['ArrowRight', 'KeyD'].includes(e.code)) setKey('right', true);
       if (['ArrowUp', 'KeyW', 'Space'].includes(e.code)) {
-        keysRef.current.jump = true;
+        setKey('jump', true);
         if (['Space', 'ArrowUp'].includes(e.code)) e.preventDefault();
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) keysRef.current.left = false;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) keysRef.current.right = false;
-      if (['ArrowUp', 'KeyW', 'Space'].includes(e.code)) keysRef.current.jump = false;
+      if (['ArrowLeft', 'KeyA'].includes(e.code)) setKey('left', false);
+      if (['ArrowRight', 'KeyD'].includes(e.code)) setKey('right', false);
+      if (['ArrowUp', 'KeyW', 'Space'].includes(e.code)) setKey('jump', false);
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -923,376 +1264,454 @@ export function BaseMarioGame({ fid, onHighScoreChange, onDailyRunEnd }: BaseMar
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [dailyDay, levelIndex, showGuide, startGame]);
 
-  const handleShareScore = async () => {
-    const castText = dailyDay !== null
-      ? `📅 FarBase Rush Daily #${dailyDay}: ${score} pts, ${deaths} total deaths 💀\nLast cause: "${deathReason}"\n\nSame level for everyone today. Can you beat my score?`
-      : `💀 I just died ${deaths} times in FarBase Rush: Trap Adventure! 😂\nLast cause: "${deathReason}"\n\nThink you can beat ${runLabel} without rage quitting?`;
-    const frameUrl = process.env.NEXT_PUBLIC_HOST
-      ? `https://${process.env.NEXT_PUBLIC_HOST}`
-      : 'https://farcaster-frame-sepia.vercel.app';
-
-    try {
-      if (typeof sdk.actions.composeCast === 'function') {
-        await sdk.actions.composeCast({
-          text: castText,
-          embeds: [frameUrl],
-        });
-      } else {
-        const intentUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(castText)}&embeds[]=${encodeURIComponent(frameUrl)}`;
-        window.open(intentUrl, '_blank');
-      }
-    } catch {
-      const intentUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(castText)}&embeds[]=${encodeURIComponent(frameUrl)}`;
-      window.open(intentUrl, '_blank');
+  const handleSelectMode = (target: number | 'daily') => {
+    if (target === 'daily') {
+      setDailyDay(today);
+      if (gameState === 'playing') startGame('daily');
+    } else {
+      setDailyDay(null);
+      setLevelIndex(target);
+      if (gameState === 'playing') startGame(target);
     }
   };
 
+  const padEvents = (key: 'left' | 'right' | 'jump') => ({
+    onPointerDown: (e: PointerEvent) => {
+      e.preventDefault();
+      setKey(key, true);
+    },
+    onPointerUp: (e: PointerEvent) => {
+      e.preventDefault();
+      setKey(key, false);
+    },
+    onPointerCancel: () => setKey(key, false),
+    onPointerLeave: () => setKey(key, false),
+  });
+
+  const handleShareScore = () => {
+    const won = gameState === 'victory';
+    const castText =
+      dailyDay !== null
+        ? t.castDaily(dailyDay, score, deaths, won)
+        : t.castStage(t.levelNames[levelIndex] ?? LEVELS[levelIndex].name, score, deaths, won);
+    return shareCast(castText);
+  };
+
   return (
-    <div className="bg-[#141522] border border-gray-800 rounded-2xl p-4 shadow-xl relative overflow-hidden">
-      <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-800/80">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-red-600 to-purple-600 flex items-center justify-center text-base shadow-lg animate-pulse">
-            ⚡
-          </div>
-          <div>
-            <h3 className="font-bold text-white text-sm flex items-center gap-1.5">
-              <span>FarBase Rush</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 font-semibold border border-red-500/30">
-                Trap Edition
-              </span>
-            </h3>
-            <p className="text-[11px] text-gray-400">
-              Survive invisible blocks, rugpull traps, and FUD monsters
-            </p>
-          </div>
+    <section className="arcade-cabinet rounded-2xl p-3.5 sm:p-4 relative overflow-hidden">
+      {/* Top Mode Selector & Utility Actions */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-[var(--border-subtle)]">
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t.modeCampaign}>
+          {LEVELS.map((lv, i) => {
+            const locked = i > unlockedLevel;
+            const selected = dailyDay === null && i === levelIndex;
+            const localName = t.levelNames[i] ?? lv.name;
+            return (
+              <button
+                key={lv.name}
+                type="button"
+                onClick={() => handleSelectMode(i)}
+                disabled={locked}
+                aria-pressed={selected}
+                title={locked ? t.levelLockedHint : localName}
+                className={`min-h-[36px] px-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-colors ${
+                  selected
+                    ? 'bg-violet-600 border-violet-400/70 text-white shadow-sm shadow-violet-950/60'
+                    : locked
+                    ? 'bg-[#0d0f1e] border-[#1c203d] text-slate-600 cursor-not-allowed'
+                    : 'bg-[#12152a] border-[var(--border-subtle)] text-slate-300 hover:text-white hover:bg-[#191d38]'
+                }`}
+              >
+                {locked && <Lock className="w-3 h-3" aria-hidden="true" />}
+                <span>{`${i + 1}`}</span>
+                <span className="hidden md:inline text-[11px] font-medium opacity-90">{localName}</span>
+              </button>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={() => handleSelectMode('daily')}
+            aria-pressed={dailyDay !== null}
+            title={t.dailySameMap}
+            className={`min-h-[36px] px-3 rounded-xl text-xs font-extrabold flex items-center gap-1.5 border transition-colors ${
+              dailyDay !== null
+                ? 'bg-amber-400 border-amber-300 text-slate-950 shadow-sm shadow-amber-950/50'
+                : 'bg-amber-950/30 border-amber-500/40 text-amber-300 hover:bg-amber-900/40'
+            }`}
+          >
+            <CalendarDays className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>{`${t.modeDaily} #${today}`}</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-1.5">
+          {gameState === 'playing' && (
+            <button
+              type="button"
+              onClick={() => startGame(dailyDay !== null ? 'daily' : levelIndex)}
+              aria-label={t.restartBtn}
+              title={t.restartBtn}
+              className="min-w-[36px] min-h-[36px] px-2.5 rounded-xl bg-[#12152a] hover:bg-[#191d38] border border-[var(--border-subtle)] text-slate-300 hover:text-white transition-colors flex items-center justify-center"
+            >
+              <RotateCcw className="w-4 h-4" aria-hidden="true" />
+            </button>
+          )}
           <button
-            onClick={() => setShowGuide(true)}
-            className="p-1.5 rounded-lg bg-gray-800/60 hover:bg-gray-700 text-gray-300 hover:text-white transition flex items-center gap-1 text-xs"
-            title="How to Play"
-          >
-            <HelpCircle className="w-4 h-4 text-blue-400" />
-            <span className="hidden sm:inline text-[11px] font-semibold">Guide</span>
-          </button>
-          <button
+            type="button"
             onClick={toggleSound}
-            className="p-1.5 rounded-lg bg-gray-800/60 hover:bg-gray-700 text-gray-400 hover:text-white transition"
-            title={soundEnabled ? 'Mute' : 'Unmute'}
+            aria-label={soundEnabled ? t.muteBtn : t.unmuteBtn}
+            aria-pressed={soundEnabled}
+            title={soundEnabled ? t.muteBtn : t.unmuteBtn}
+            className="min-w-[36px] min-h-[36px] px-2.5 rounded-xl bg-[#12152a] hover:bg-[#191d38] border border-[var(--border-subtle)] text-slate-300 hover:text-white transition-colors flex items-center justify-center"
           >
-            {soundEnabled ? <Volume2 className="w-4 h-4 text-purple-400" /> : <VolumeX className="w-4 h-4" />}
+            {soundEnabled ? (
+              <Volume2 className="w-4 h-4 text-sky-400" aria-hidden="true" />
+            ) : (
+              <VolumeX className="w-4 h-4 text-slate-500" aria-hidden="true" />
+            )}
           </button>
-          <div className="flex items-center gap-1 bg-yellow-950/40 border border-yellow-800/40 px-2 py-1 rounded-lg text-xs font-bold text-yellow-400">
-            <Trophy className="w-3.5 h-3.5" />
+          <button
+            type="button"
+            onClick={() => setShowGuide(true)}
+            aria-label={t.guideBtn}
+            className="min-h-[36px] px-2.5 rounded-xl bg-[#12152a] hover:bg-[#191d38] border border-[var(--border-subtle)] text-slate-200 hover:text-white transition-colors flex items-center gap-1.5 text-xs font-semibold"
+          >
+            <HelpCircle className="w-4 h-4 text-violet-400" aria-hidden="true" />
+            <span className="hidden sm:inline">{t.guideBtn}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Telemetry HUD Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5 px-0.5 text-xs">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1" aria-label={`${t.lives}: ${lives}`}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Heart
+                key={i}
+                aria-hidden="true"
+                className={`w-4 h-4 transition-colors ${
+                  i < lives ? 'text-rose-500 fill-rose-500' : 'text-slate-700'
+                }`}
+              />
+            ))}
+          </div>
+          <span className="text-slate-300 font-semibold truncate max-w-[180px]">{stageTitle}</span>
+        </div>
+
+        <div className="flex items-center gap-2 tabular-nums">
+          <div className="px-2.5 py-1 rounded-lg bg-[#0c0e1d] border border-[#1f2447] text-slate-300">
+            <span className="text-[11px] text-slate-400 mr-1">{t.score}</span>
+            <strong className="text-white font-extrabold">{score}</strong>
+          </div>
+          <div
+            className="px-2 py-1 rounded-lg bg-amber-950/35 border border-amber-500/30 text-amber-300 font-bold flex items-center gap-1"
+            title={`${t.best}: ${highScore}`}
+          >
+            <Trophy className="w-3.5 h-3.5" aria-hidden="true" />
             <span>{highScore}</span>
           </div>
-          <div className="flex items-center gap-1 bg-red-950/40 border border-red-800/40 px-2 py-1 rounded-lg text-xs font-bold text-red-400" title="Total Deaths">
-            <Skull className="w-3.5 h-3.5" />
+          <div
+            className="px-2 py-1 rounded-lg bg-rose-950/35 border border-rose-500/30 text-rose-300 font-bold flex items-center gap-1"
+            title={`${t.deaths}: ${deaths}`}
+          >
+            <Skull className="w-3.5 h-3.5" aria-hidden="true" />
             <span>{deaths}</span>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-1 mb-2 text-xs">
-        <div className="flex items-center gap-1">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Heart
-              key={i}
-              className={`w-4 h-4 ${i < lives ? 'text-red-500 fill-red-500' : 'text-gray-700'}`}
-            />
-          ))}
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-purple-300 font-bold">
-            {runLabel}
-          </span>
-          <span className="text-gray-400 font-medium">
-            Score: <strong className="text-white text-sm">{score}</strong>
-          </span>
-          {score >= 100 && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-green-400 bg-green-950/40 border border-green-800/40 px-2 py-0.5 rounded-full font-bold">
-              <Sparkles className="w-3 h-3" /> +0.2x Multiplier
-            </span>
-          )}
-        </div>
+      {/* Stage Distance Progress Bar */}
+      <div className="w-full h-1.5 rounded-full bg-[#0b0d1b] overflow-hidden mb-2.5 border border-[#1d2140]">
+        <div
+          className="h-full bg-gradient-to-r from-sky-400 via-violet-500 to-rose-500 transition-[width] duration-150"
+          style={{ width: `${progressPct}%` }}
+        />
       </div>
 
-      <div className="relative w-full rounded-xl overflow-hidden border-2 border-gray-800 bg-[#0a0a14] aspect-[480/280] shadow-inner">
-        <canvas
-          ref={canvasRef}
-          width={480}
-          height={280}
-          className="w-full h-full block image-pixelated"
-        />
+      {/* Arcade Screen Viewport */}
+      <div className="arcade-screen-bezel relative w-full rounded-xl overflow-hidden border border-[#2b3160] bg-[#060713] aspect-[480/280]">
+        <canvas ref={canvasRef} width={480} height={280} className="w-full h-full block" />
 
         {gameState === 'idle' && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
-            <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-600 to-purple-600 items-center justify-center text-2xl shadow-xl mb-3 animate-bounce">
-              ⚡
-            </div>
-            <h4 className="font-extrabold text-white text-base mb-3 sm:mb-1">FarBase Rush: Trap Adventure</h4>
-            <p className="hidden sm:block text-xs text-red-300 max-w-xs mb-4">
-              Watch out for invisible trap blocks, fake scam coins, and collapsing platforms!
+          <div className="absolute inset-0 bg-[#070814]/82 backdrop-blur-[3px] flex flex-col items-center justify-center p-4 text-center">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-widest bg-rose-500/15 text-rose-300 border border-rose-500/35 mb-2">
+              <Zap className="w-3 h-3" aria-hidden="true" />
+              {t.idleTag}
+            </span>
+
+            <h1 className="font-extrabold text-white text-lg sm:text-xl tracking-tight mb-1">
+              {stageTitle}
+            </h1>
+
+            <p className="text-xs text-slate-300 max-w-sm mb-3.5 line-clamp-2 sm:line-clamp-none">
+              {t.idleDesc}
             </p>
-            <div className="flex gap-2">
+
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
               <button
-                onClick={() => setShowGuide(true)}
-                className="py-2.5 px-4 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold text-xs flex items-center gap-1.5 transition active:scale-95"
-              >
-                <HelpCircle className="w-4 h-4" />
-                <span>HOW TO PLAY</span>
-              </button>
-              <button
+                type="button"
                 onClick={() => startGame(dailyDay !== null ? 'daily' : levelIndex)}
-                className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-500 hover:to-purple-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg transition active:scale-95"
+                className="min-h-[44px] px-6 rounded-xl bg-gradient-to-r from-rose-500 via-violet-600 to-indigo-600 hover:opacity-95 text-white font-extrabold text-xs tracking-wide flex items-center gap-2 shadow-lg shadow-violet-950/60 transition-opacity"
               >
-                <Play className="w-4 h-4 fill-white" />
-                <span>{dailyDay !== null ? `START DAILY #${today}` : `START LV ${levelIndex + 1}`}</span>
+                <Play className="w-4 h-4 fill-white" aria-hidden="true" />
+                <span>{dailyDay !== null ? t.startDaily(today) : t.startStage(levelIndex + 1)}</span>
               </button>
-            </div>
-            <div className="flex gap-1.5 mt-3" role="group" aria-label="Choose level">
-              {LEVELS.map((lv, i) => (
-                <button
-                  key={lv.name}
-                  onClick={() => {
-                    setDailyDay(null);
-                    setLevelIndex(i);
-                  }}
-                  disabled={i > unlockedLevel}
-                  aria-pressed={dailyDay === null && i === levelIndex}
-                  title={i > unlockedLevel ? 'Clear the previous level to unlock' : lv.name}
-                  className={`py-1 px-2.5 rounded-lg text-[11px] font-bold flex items-center gap-1 border transition ${
-                    dailyDay === null && i === levelIndex
-                      ? 'bg-purple-600 border-purple-400 text-white'
-                      : i > unlockedLevel
-                      ? 'bg-gray-900 border-gray-800 text-gray-600 cursor-not-allowed'
-                      : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
-                  }`}
-                >
-                  {i > unlockedLevel && <Lock className="w-3 h-3" />}
-                  <span>Lv {i + 1}</span>
-                </button>
-              ))}
+
               <button
-                onClick={() => setDailyDay(today)}
-                aria-pressed={dailyDay !== null}
-                title="New level every day (UTC), same for everyone"
-                className={`py-1 px-2.5 rounded-lg text-[11px] font-bold flex items-center gap-1 border transition ${
-                  dailyDay !== null
-                    ? 'bg-yellow-500 border-yellow-300 text-black'
-                    : 'bg-yellow-950/40 border-yellow-700/50 text-yellow-300 hover:bg-yellow-900/40'
-                }`}
+                type="button"
+                onClick={() => setShowGuide(true)}
+                className="min-h-[44px] px-4 rounded-xl bg-[#141830] hover:bg-[#1c2142] border border-[var(--border-subtle)] text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-colors"
               >
-                <CalendarDays className="w-3 h-3" />
-                <span>Daily #{today}</span>
+                <HelpCircle className="w-4 h-4 text-sky-400" aria-hidden="true" />
+                <span>{t.guideBtn}</span>
               </button>
             </div>
+
             {dailyDay !== null && (
-              <p className="text-[11px] text-yellow-300/90 mt-2">
-                {dailyBest > 0 ? `Your best today: ${dailyBest} pts` : 'New level every day. Same map for everyone!'}
-              </p>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-[11px] text-amber-200/90">
+                <span>{dailyBest > 0 ? t.dailyYourBest(dailyBest) : t.dailySameMap}</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-950/50 border border-amber-500/30 text-amber-300 tabular-nums">
+                  <Clock className="w-3 h-3" aria-hidden="true" />
+                  {t.dailyResetIn(utcCountdown)}
+                </span>
+              </div>
             )}
           </div>
         )}
 
         {gameState === 'gameover' && (
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center animate-fade-in">
-            <span className="text-4xl mb-1 animate-bounce">💀</span>
-            <h4 className="font-extrabold text-red-500 text-base mb-0.5">YOU GOT TROLLED!</h4>
-            <p className="text-xs text-yellow-300 font-semibold mb-1 italic">
-              &quot;{deathReason}&quot;
+          <div className="absolute inset-0 bg-[#070814]/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+            <div
+              className="w-11 h-11 rounded-2xl bg-rose-500/15 border border-rose-500/40 flex items-center justify-center mb-2"
+              aria-hidden="true"
+            >
+              <Skull className="w-6 h-6 text-rose-400" />
+            </div>
+            <h3 className="font-extrabold text-rose-400 text-base sm:text-lg tracking-wide mb-1">
+              {t.gameOverTitle}
+            </h3>
+            <p className="text-xs text-amber-200 font-medium max-w-sm mb-1.5">
+              &ldquo;{t.deathReasons[deathCause]}&rdquo;
             </p>
-            <p className="text-[11px] text-gray-400 mb-3">
-              Total Deaths: <strong className="text-red-400 font-bold text-xs">{deaths}</strong> • Score: {score}
+            <p className="text-xs text-slate-400 tabular-nums mb-3.5">
+              {t.deaths}: <strong className="text-rose-300">{deaths}</strong> • {t.score}:{' '}
+              <strong className="text-white">{score}</strong>
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <button
+                type="button"
                 onClick={() => startGame(dailyDay !== null ? 'daily' : levelIndex)}
-                className="py-2 px-4 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs flex items-center gap-1.5 transition active:scale-95"
+                className="min-h-[42px] px-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:opacity-95 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition-opacity"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Try Again</span>
+                <RotateCcw className="w-4 h-4" aria-hidden="true" />
+                <span>{t.tryAgain}</span>
               </button>
               <button
+                type="button"
                 onClick={handleShareScore}
-                className="py-2 px-4 rounded-xl bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-500 hover:to-purple-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition active:scale-95"
+                className="min-h-[42px] px-4 rounded-xl bg-[#151933] hover:bg-[#1d2244] border border-rose-500/40 text-rose-200 font-bold text-xs flex items-center gap-1.5 transition-colors"
               >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>Share Troll on Warpcast</span>
+                <Share2 className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>{t.shareFail}</span>
               </button>
             </div>
           </div>
         )}
 
         {gameState === 'victory' && (
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center animate-fade-in">
-            <span className="text-3xl mb-1">🏆</span>
-            <h4 className="font-extrabold text-yellow-400 text-base mb-1">
+          <div className="absolute inset-0 bg-[#070814]/88 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+            <div
+              className="w-11 h-11 rounded-2xl bg-amber-400/15 border border-amber-400/45 flex items-center justify-center mb-2"
+              aria-hidden="true"
+            >
+              <Trophy className="w-6 h-6 text-amber-300" />
+            </div>
+            <h3 className="font-extrabold text-amber-300 text-base sm:text-lg tracking-wide mb-1">
               {dailyDay !== null
-                ? `DAILY #${dailyDay} CLEARED!`
+                ? t.victoryDailyTitle(dailyDay)
                 : levelIndex + 1 < LEVELS.length
-                ? `LEVEL ${levelIndex + 1} CLEARED!`
-                : 'TRAP MASTER! ALL LEVELS CLEARED'}
-            </h4>
-            <p className="text-xs text-gray-300 mb-1">
-              You survived all troll traps! Final Score: <strong className="text-yellow-400 font-bold text-sm">{score}</strong>
+                ? t.victoryStageTitle(levelIndex + 1)
+                : t.victoryAllTitle}
+            </h3>
+            <p className="text-xs text-slate-200 tabular-nums mb-1">
+              {t.victorySub(score)}
             </p>
-            <p className="text-[11px] text-green-400 font-semibold mb-3">
-              {dailyDay !== null ? `Your best today: ${Math.max(dailyBest, score)} pts` : 'Unlocked +0.2x Season Multiplier!'}
-            </p>
-            <div className="flex gap-2">
+            {dailyDay !== null && (
+              <p className="text-[11px] text-emerald-300 font-semibold tabular-nums mb-3">
+                {t.dailyYourBest(Math.max(dailyBest, score))}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
               {dailyDay === null && levelIndex + 1 < LEVELS.length ? (
                 <button
+                  type="button"
                   onClick={() => startGame(levelIndex + 1, true)}
-                  className="py-2 px-4 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:opacity-90 text-black font-bold text-xs flex items-center gap-1.5 transition active:scale-95"
+                  className="min-h-[42px] px-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 hover:opacity-95 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 shadow-md transition-opacity"
                 >
-                  <span>Next: {LEVELS[levelIndex + 1].name}</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <span>{t.nextStage(t.levelNames[levelIndex + 1] ?? LEVELS[levelIndex + 1].name)}</span>
+                  <ChevronRight className="w-4 h-4" aria-hidden="true" />
                 </button>
               ) : (
                 <button
+                  type="button"
                   onClick={() => startGame(dailyDay !== null ? 'daily' : 0)}
-                  className="py-2 px-4 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs flex items-center gap-1.5 transition active:scale-95"
+                  className="min-h-[42px] px-4 rounded-xl bg-[#151933] hover:bg-[#1d2244] border border-[var(--border-subtle)] text-white font-bold text-xs flex items-center gap-1.5 transition-colors"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Play Again</span>
+                  <RotateCcw className="w-4 h-4" aria-hidden="true" />
+                  <span>{t.playAgain}</span>
                 </button>
               )}
               <button
+                type="button"
                 onClick={handleShareScore}
-                className="py-2 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition active:scale-95"
+                className="min-h-[42px] px-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition-colors"
               >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>Share Victory on Warpcast</span>
+                <Share2 className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>{t.shareWin}</span>
               </button>
             </div>
           </div>
         )}
       </div>
 
-      <div className="mt-3 pt-3 border-t border-gray-800/80 flex items-center justify-between gap-4 select-none touch-none">
+      {/* Ergonomic Mobile Touch Pad (>= 56px height, zero layout shift) */}
+      <div className="mt-3.5 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-3 select-none touch-none">
         <div className="flex items-center gap-2">
           <button
-            onPointerDown={(e) => {
-              e.preventDefault();
-              keysRef.current.left = true;
-            }}
-            onPointerUp={(e) => {
-              e.preventDefault();
-              keysRef.current.left = false;
-            }}
-            onPointerLeave={(e) => {
-              e.preventDefault();
-              keysRef.current.left = false;
-            }}
-            className="w-13 h-12 px-3.5 py-2.5 rounded-xl bg-gray-800/90 active:bg-blue-600 border border-gray-700 text-white flex items-center justify-center font-bold text-base shadow active:scale-90 transition-transform"
-            aria-label="Left"
+            type="button"
+            {...padEvents('left')}
+            aria-label={t.ctrlLeft}
+            className={`w-16 sm:w-20 h-14 rounded-2xl border flex items-center justify-center transition-colors duration-100 ${
+              padActive.left
+                ? 'bg-sky-600 border-sky-300 text-white shadow-inner'
+                : 'bg-[#13172e] hover:bg-[#1a1f3d] border-[#2a3160] text-slate-100 shadow-md'
+            }`}
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-6 h-6" aria-hidden="true" />
           </button>
+
           <button
-            onPointerDown={(e) => {
-              e.preventDefault();
-              keysRef.current.right = true;
-            }}
-            onPointerUp={(e) => {
-              e.preventDefault();
-              keysRef.current.right = false;
-            }}
-            onPointerLeave={(e) => {
-              e.preventDefault();
-              keysRef.current.right = false;
-            }}
-            className="w-13 h-12 px-3.5 py-2.5 rounded-xl bg-gray-800/90 active:bg-blue-600 border border-gray-700 text-white flex items-center justify-center font-bold text-base shadow active:scale-90 transition-transform"
-            aria-label="Right"
+            type="button"
+            {...padEvents('right')}
+            aria-label={t.ctrlRight}
+            className={`w-16 sm:w-20 h-14 rounded-2xl border flex items-center justify-center transition-colors duration-100 ${
+              padActive.right
+                ? 'bg-sky-600 border-sky-300 text-white shadow-inner'
+                : 'bg-[#13172e] hover:bg-[#1a1f3d] border-[#2a3160] text-slate-100 shadow-md'
+            }`}
           >
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className="w-6 h-6" aria-hidden="true" />
           </button>
         </div>
 
         <button
-          onPointerDown={(e) => {
-            e.preventDefault();
-            keysRef.current.jump = true;
-          }}
-          onPointerUp={(e) => {
-            e.preventDefault();
-            keysRef.current.jump = false;
-          }}
-          onPointerLeave={(e) => {
-            e.preventDefault();
-            keysRef.current.jump = false;
-          }}
-          className="flex-1 max-w-[170px] h-12 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 active:from-purple-700 active:to-blue-700 border border-purple-400/40 text-white font-extrabold text-sm flex items-center justify-center gap-1.5 shadow-lg active:scale-95 transition-transform"
-          aria-label="Jump"
+          type="button"
+          {...padEvents('jump')}
+          aria-label={t.ctrlJump}
+          className={`flex-1 max-w-[190px] h-14 px-5 rounded-2xl border font-extrabold text-sm tracking-wider flex items-center justify-center gap-2 transition-colors duration-100 ${
+            padActive.jump
+              ? 'bg-rose-500 border-rose-300 text-white shadow-inner'
+              : 'bg-gradient-to-r from-violet-600 to-sky-600 hover:from-violet-500 hover:to-sky-500 border-violet-400/50 text-white shadow-lg shadow-violet-950/50'
+          }`}
         >
-          <ArrowUp className="w-5 h-5" />
-          <span>JUMP</span>
+          <ArrowUp className="w-5 h-5" aria-hidden="true" />
+          <span>{t.ctrlJump}</span>
         </button>
       </div>
 
+      <p className="hidden sm:block text-center text-[11px] text-slate-400 mt-2.5">
+        {t.ctrlHintDesktop}
+      </p>
+
+      {/* Accessible How-To-Play Modal */}
       {showGuide && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#141522] border border-gray-800 rounded-2xl max-w-md w-full p-5 relative shadow-2xl space-y-4 text-xs text-gray-300">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-800">
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowGuide(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="guide-dialog-title"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#111428] border border-[var(--border-subtle)] rounded-2xl max-w-md w-full p-5 relative shadow-2xl space-y-4 text-xs text-slate-200 max-h-[85dvh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)]">
               <div className="flex items-center gap-2">
-                <HelpCircle className="w-5 h-5 text-blue-400" />
-                <h3 className="font-bold text-white text-sm">How to Play FarBase Rush</h3>
+                <HelpCircle className="w-5 h-5 text-sky-400" aria-hidden="true" />
+                <h2 id="guide-dialog-title" className="font-bold text-white text-sm">
+                  {t.guideTitle}
+                </h2>
               </div>
               <button
+                type="button"
                 onClick={() => setShowGuide(false)}
-                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800"
+                aria-label="Close"
+                className="min-w-[36px] min-h-[36px] rounded-xl text-slate-400 hover:text-white hover:bg-white/5 flex items-center justify-center"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               <div>
-                <h4 className="font-semibold text-white mb-1">🎮 Controls</h4>
-                <p className="text-gray-400">Desktop: Use Arrow Keys or A / D to run, Space / Up / W to Jump. Mobile: Tap the on-screen Left, Right, and Jump buttons.</p>
+                <h3 className="font-bold text-white mb-1">{t.guideControlsTitle}</h3>
+                <p className="text-slate-300 leading-relaxed">{t.guideControlsBody}</p>
               </div>
 
               <div>
-                <h4 className="font-semibold text-white mb-1">🪙 Scoring &amp; Rewards</h4>
-                <ul className="space-y-1 text-gray-300">
-                  <li>🔵 <strong>Base Coin:</strong> +{POINTS.base} pts</li>
-                  <li>🟣 <strong>Farcaster Coin:</strong> +{POINTS.farcaster} pts</li>
-                  <li>❓ <strong>Mystery Block:</strong> +{POINTS.question} pts (hit from below)</li>
-                  <li>👾 <strong>Stomp FUD:</strong> +{POINTS.stomp} pts &amp; bounce</li>
-                  <li>🏆 <strong>Goal Flag:</strong> +{POINTS.flag} pts</li>
+                <h3 className="font-bold text-white mb-1.5">{t.guideScoreTitle}</h3>
+                <ul className="space-y-1.5 text-slate-200">
+                  <li className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-sky-400 shrink-0" aria-hidden="true" />
+                    <span>{t.guideScoreBase(POINTS.base)}</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-3 h-3 rotate-45 bg-purple-400 shrink-0" aria-hidden="true" />
+                    <span>{t.guideScoreFc(POINTS.farcaster)}</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-sm bg-amber-400 shrink-0" aria-hidden="true" />
+                    <span>{t.guideScoreMystery(POINTS.question)}</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Zap className="w-3.5 h-3.5 text-emerald-400 shrink-0" aria-hidden="true" />
+                    <span>{t.guideScoreStomp(POINTS.stomp)}</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Flag className="w-3.5 h-3.5 text-amber-300 shrink-0" aria-hidden="true" />
+                    <span>{t.guideScoreFlag(POINTS.flag)}</span>
+                  </li>
                 </ul>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-red-950/30 border border-red-800/40 text-red-200">
-                <h4 className="font-bold text-red-300 mb-1">⚠️ Trap Warnings (Cat Mario Style)</h4>
-                <ul className="space-y-1 text-red-200">
-                  <li>• Invisible blocks over pits will block your jump mid-air.</li>
-                  <li>• Platforms marked SAFE will collapse in 0.25s.</li>
-                  <li>• Glowing 10K$ coins are fake scam traps.</li>
-                  <li>• The goal flag flees on first contact!</li>
+              <div className="p-3 rounded-xl bg-rose-950/35 border border-rose-500/35 text-rose-100 space-y-1.5">
+                <h3 className="font-bold text-rose-300 flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
+                  <span>{t.guideTrapTitle}</span>
+                </h3>
+                <ul className="space-y-1 text-rose-100/90 list-disc list-inside">
+                  {t.guideTraps.map((tip, idx) => (
+                    <li key={idx}>{tip}</li>
+                  ))}
                 </ul>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-green-950/30 border border-green-800/40 text-green-200">
-                <p>✨ <strong>Season Bonus:</strong> Score 100+ points to unlock an active <strong>+0.2x Multiplier</strong> on your season score!</p>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={() => setShowGuide(false)}
-              className="w-full py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-bold"
+              className="w-full min-h-[44px] rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold transition-colors"
             >
-              Got It, Let&apos;s Play!
+              {t.guideClose}
             </button>
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }
-
-export { BaseMarioGame as FarBaseRushGame };

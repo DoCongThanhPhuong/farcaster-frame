@@ -1,13 +1,8 @@
 import { NextResponse } from 'next/server';
+import { resolveBaseUrl } from '@/lib/url';
 
 export async function POST(req: Request) {
-  const host =
-    process.env.NEXT_PUBLIC_HOST ||
-    req.headers.get('x-forwarded-host') ||
-    req.headers.get('host') ||
-    'localhost:3000';
-  const proto = req.headers.get('x-forwarded-proto') || 'https';
-  const baseUrl = `${proto}://${host}`;
+  const baseUrl = resolveBaseUrl(req.headers);
 
   let fid = 'User';
   try {
@@ -21,17 +16,17 @@ export async function POST(req: Request) {
   const html = `<!DOCTYPE html>
 <html>
 <head>
-  <meta property="og:title" content="FarBase • FID #${fid}" />
+  <meta property="og:title" content="FarBase Rush • FID #${fid}" />
   <meta property="fc:frame" content="vNext" />
   <meta property="fc:frame:image" content="${baseUrl}/opengraph-image" />
   <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
-  <meta property="fc:frame:button:1" content="🚀 Open Mini App" />
+  <meta property="fc:frame:button:1" content="Play FarBase Rush" />
   <meta property="fc:frame:button:1:action" content="link" />
   <meta property="fc:frame:button:1:target" content="${baseUrl}" />
 </head>
 <body>
-  <h1>FID #${fid} Verified</h1>
-  <p>Open the Mini App to keep your daily streak and play FarBase Rush.</p>
+  <h1>FID #${fid} Ready</h1>
+  <p>Launch FarBase Rush to play today's trap course and climb the leaderboard.</p>
 </body>
 </html>`;
 

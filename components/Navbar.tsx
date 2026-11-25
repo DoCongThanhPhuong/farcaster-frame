@@ -1,27 +1,24 @@
 'use client';
 
-import { useAccount, useConnect, useDisconnect, type Connector } from 'wagmi';
-import { Bookmark, Wallet, LogOut, Sparkles, X, Loader2, AlertCircle } from 'lucide-react';
-import sdk from '@farcaster/frame-sdk';
 import { useState } from 'react';
+import { Bookmark, Check, Globe } from 'lucide-react';
+import sdk from '@farcaster/frame-sdk';
+import { I18N, LOCALES, LOCALE_META, type Locale } from '@/lib/i18n';
 
 interface NavbarProps {
+  locale: Locale;
+  onLocaleChange: (next: Locale) => void;
   user: {
     fid?: number;
     username?: string;
-    displayName?: string;
     pfpUrl?: string;
   } | null;
   isInMiniApp: boolean;
 }
 
-export function Navbar({ user, isInMiniApp }: NavbarProps) {
-  const { address, isConnected } = useAccount();
-  const { connect, connectors, isPending, error } = useConnect();
-  const { disconnect } = useDisconnect();
+export function Navbar({ locale, onLocaleChange, user, isInMiniApp }: NavbarProps) {
   const [pinned, setPinned] = useState(false);
-  const [showWalletModal, setShowWalletModal] = useState(false);
-  const [connectError, setConnectError] = useState<string | null>(null);
+  const t = I18N[locale];
 
   const handleAddMiniApp = async () => {
     try {
@@ -34,166 +31,121 @@ export function Navbar({ user, isInMiniApp }: NavbarProps) {
     }
   };
 
-  const handleConnectClick = () => {
-    if (isConnected) {
-      disconnect();
-      return;
-    }
-
-    setConnectError(null);
-
-    if (isInMiniApp) {
-      const fcConnector = connectors.find((c) => c.name.toLowerCase().includes('farcaster'));
-      if (fcConnector) {
-        connect(
-          { connector: fcConnector },
-          {
-            onError: (err) => setConnectError(err.message),
-          }
-        );
-        return;
-      }
-    }
-
-    setShowWalletModal(true);
-  };
-
-  const handleSelectConnector = (connector: Connector) => {
-    setConnectError(null);
-    connect(
-      { connector },
-      {
-        onSuccess: () => setShowWalletModal(false),
-        onError: (err) => {
-          if (err.message.includes('not found') || err.message.includes('Connector not found')) {
-            setConnectError('Browser wallet extension (MetaMask / Brave) not detected. Please install an extension or open inside Warpcast.');
-          } else {
-            setConnectError(err.message || 'Connection failed.');
-          }
-        },
-      }
-    );
-  };
-
   return (
-    <>
-      <header className="w-full border-b border-gray-800 bg-[#12131c]/90 backdrop-blur sticky top-0 z-50 px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#855DCD] to-[#0052FF] flex items-center justify-center shadow-lg shadow-purple-900/30">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-base text-white tracking-tight">FARCAST</span>
-                <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-purple-900/60 text-purple-300 border border-purple-700/50">
-                  RUSH
-                </span>
-              </div>
-              <p className="text-[11px] text-gray-400">Mini App • Base L2</p>
+    <header className="w-full border-b border-[var(--border-subtle)] bg-[#090b18]/90 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-4 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))]">
+      <div className="max-w-2xl mx-auto flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div
+            className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 via-indigo-600 to-sky-500 p-[1px] shadow-lg shadow-violet-950/50 shrink-0"
+            aria-hidden="true"
+          >
+            <div className="w-full h-full rounded-[11px] bg-[#0b0d1d] flex items-center justify-center">
+              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
+                <path
+                  d="M13.5 2L5 13.2h5.6L9.5 22L19 10.4h-5.8L13.5 2Z"
+                  fill="url(#fb-bolt)"
+                  stroke="#E2E8F0"
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                />
+                <defs>
+                  <linearGradient id="fb-bolt" x1="5" y1="2" x2="19" y2="22" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#38BDF8" />
+                    <stop offset="0.55" stopColor="#A78BFA" />
+                    <stop offset="1" stopColor="#F43F5E" />
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {isInMiniApp && (
-              <button
-                onClick={handleAddMiniApp}
-                disabled={pinned}
-                className={`p-2 rounded-lg border text-xs font-medium flex items-center gap-1 transition ${
-                  pinned
-                    ? 'border-green-600/50 bg-green-950/40 text-green-300'
-                    : 'border-purple-600/40 bg-purple-950/30 hover:bg-purple-900/40 text-purple-300'
-                }`}
-                title="Pin to Warpcast"
-              >
-                <Bookmark className="w-4 h-4" />
-                <span className="hidden sm:inline">{pinned ? 'Pinned' : 'Pin App'}</span>
-              </button>
-            )}
-
-            <button
-              onClick={handleConnectClick}
-              disabled={isPending}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
-                isConnected
-                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700'
-                  : 'bg-gradient-to-r from-[#855DCD] to-[#0052FF] hover:opacity-95 text-white shadow-md'
-              }`}
-            >
-              {isPending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Wallet className="w-3.5 h-3.5" />
-              )}
-              {isConnected && address
-                ? `${address.slice(0, 5)}...${address.slice(-4)}`
-                : isPending
-                ? 'Connecting...'
-                : 'Connect Wallet'}
-              {isConnected && <LogOut className="w-3 h-3 ml-0.5 text-gray-400" />}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {showWalletModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#141522] border border-gray-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl relative">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-800">
-              <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-purple-400" />
-                Select Wallet
-              </h3>
-              <button
-                onClick={() => setShowWalletModal(false)}
-                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="font-extrabold text-sm sm:text-base text-white tracking-wider">
+                FARBASE
+              </span>
+              <span className="text-[10px] font-extrabold tracking-widest px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-300 border border-rose-500/35">
+                RUSH
+              </span>
             </div>
-
-            {(connectError || error) && (
-              <div className="mb-3 p-2.5 rounded-xl bg-red-950/40 border border-red-800/40 text-red-300 text-xs flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
-                <span>{connectError || error?.message}</span>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              {connectors.map((c) => {
-                const isFc = c.name.toLowerCase().includes('farcaster');
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => handleSelectConnector(c)}
-                    disabled={isPending}
-                    className="w-full p-3 rounded-xl border border-gray-700/70 bg-gray-900/60 hover:bg-purple-950/40 hover:border-purple-600/50 flex items-center justify-between transition text-left group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-base">
-                        {isFc ? '🟣' : '🦊'}
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-white group-hover:text-purple-300">
-                          {isFc ? 'Farcaster Wallet' : 'MetaMask / Browser Wallet'}
-                        </div>
-                        <div className="text-[10px] text-gray-400">
-                          {isFc ? 'Recommended for Warpcast' : 'Brave, MetaMask, Coinbase'}
-                        </div>
-                      </div>
-                    </div>
-                    {isPending && <Loader2 className="w-4 h-4 animate-spin text-purple-400" />}
-                  </button>
-                );
-              })}
-            </div>
-
-            <p className="text-[11px] text-gray-500 mt-4 text-center">
-              No wallet detected? Install MetaMask extension or open directly inside the Warpcast mobile app.
+            <p className="text-[11px] text-slate-400 truncate hidden xs:block sm:block">
+              {t.brandSubtitle}
             </p>
           </div>
         </div>
-      )}
-    </>
+
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div
+            role="group"
+            aria-label={t.langLabel}
+            className="flex items-center rounded-xl bg-[#12152a] border border-[var(--border-subtle)] p-0.5"
+          >
+            <Globe className="w-3.5 h-3.5 text-slate-400 ml-1.5 mr-1 hidden sm:block" aria-hidden="true" />
+            {LOCALES.map((code) => {
+              const active = code === locale;
+              return (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => onLocaleChange(code)}
+                  aria-pressed={active}
+                  title={LOCALE_META[code]}
+                  className={`min-w-[34px] min-h-[34px] px-2 rounded-lg text-[11px] font-bold tracking-wide transition-colors duration-150 ${
+                    active
+                      ? 'bg-violet-600 text-white shadow-sm shadow-violet-950/60'
+                      : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
+                  }`}
+                >
+                  {code.toUpperCase()}
+                </button>
+              );
+            })}
+          </div>
+
+          {user?.fid ? (
+            <div
+              className="hidden sm:flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-xl bg-[#12152a] border border-[var(--border-subtle)] text-xs text-slate-200 max-w-[140px]"
+              title={user.username ? `@${user.username} (#${user.fid})` : `FID #${user.fid}`}
+            >
+              {user.pfpUrl ? (
+                <img
+                  src={user.pfpUrl}
+                  alt=""
+                  className="w-5 h-5 rounded-full object-cover border border-violet-400/40 shrink-0"
+                />
+              ) : (
+                <span className="w-5 h-5 rounded-full bg-violet-600/40 text-violet-200 text-[10px] font-bold flex items-center justify-center shrink-0">
+                  {(user.username || 'F')[0].toUpperCase()}
+                </span>
+              )}
+              <span className="font-semibold truncate">
+                {user.username ? `@${user.username}` : `#${user.fid}`}
+              </span>
+            </div>
+          ) : null}
+
+          {isInMiniApp && (
+            <button
+              type="button"
+              onClick={handleAddMiniApp}
+              disabled={pinned}
+              aria-label={pinned ? t.pinned : t.pinApp}
+              className={`min-h-[36px] px-2.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors duration-150 ${
+                pinned
+                  ? 'border-emerald-500/40 bg-emerald-950/40 text-emerald-300 cursor-default'
+                  : 'border-violet-500/40 bg-violet-950/35 hover:bg-violet-900/45 text-violet-200'
+              }`}
+            >
+              {pinned ? (
+                <Check className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
+              ) : (
+                <Bookmark className="w-3.5 h-3.5 text-violet-300" aria-hidden="true" />
+              )}
+              <span className="hidden sm:inline">{pinned ? t.pinned : t.pinApp}</span>
+            </button>
+          )}
+        </div>
+      </div>
+    </header>
   );
 }

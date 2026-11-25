@@ -1,13 +1,8 @@
 import { NextResponse } from 'next/server';
+import { resolveBaseUrl } from '@/lib/url';
 
 export async function GET(req: Request) {
-  const host =
-    process.env.NEXT_PUBLIC_HOST ||
-    req.headers.get('x-forwarded-host') ||
-    req.headers.get('host') ||
-    'farcaster-frame-sepia.vercel.app';
-  const proto = req.headers.get('x-forwarded-proto') || 'https';
-  const baseUrl = `${proto}://${host}`;
+  const baseUrl = resolveBaseUrl(req.headers, 'farcaster-frame-sepia.vercel.app');
 
   const manifest = {
     accountAssociation: {
@@ -29,7 +24,7 @@ export async function GET(req: Request) {
       imageUrl: `${baseUrl}/opengraph-image`,
       buttonTitle: 'Play FarBase Rush',
       splashImageUrl: `${baseUrl}/splash.png`,
-      splashBackgroundColor: '#0f0e17',
+      splashBackgroundColor: '#070812',
     },
   };
 

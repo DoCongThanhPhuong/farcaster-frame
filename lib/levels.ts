@@ -13,8 +13,7 @@ export interface LevelTrollBlock {
   y: number;
   w: number;
   h: number;
-  label: string;
-  reason: string;
+  gas?: boolean;
 }
 
 export interface LevelCoin {
@@ -106,8 +105,8 @@ export const LEVELS: Level[] = [
       ...stairs(2600),
     ],
     trollBlocks: [
-      { x: 735, y: 170, w: 20, h: 20, label: '😈', reason: 'Bonked head on an invisible block and fell into the abyss! 😈' },
-      { x: 2160, y: 170, w: 20, h: 20, label: '📉', reason: 'Blocked by an invisible wall right before the goal! 📉' },
+      { x: 735, y: 170, w: 20, h: 20 },
+      { x: 2160, y: 170, w: 20, h: 20 },
     ],
     coins: [
       { x: 172, y: 135, type: 'base' },
@@ -169,8 +168,8 @@ export const LEVELS: Level[] = [
       ...stairs(2900),
     ],
     trollBlocks: [
-      { x: 625, y: 170, w: 20, h: 20, label: '⛽', reason: 'Gas spike froze your jump mid-air over the pit! ⛽' },
-      { x: 1480, y: 170, w: 20, h: 20, label: '😈', reason: 'Another invisible block. You never learn! 😈' },
+      { x: 625, y: 170, w: 20, h: 20, gas: true },
+      { x: 1480, y: 170, w: 20, h: 20 },
     ],
     coins: [
       { x: 162, y: 135, type: 'base' },
@@ -238,8 +237,8 @@ export const LEVELS: Level[] = [
       ...stairs(3200),
     ],
     trollBlocks: [
-      { x: 530, y: 170, w: 20, h: 20, label: '🐻', reason: 'The bear market blocked your leap of faith! 🐻' },
-      { x: 3000, y: 190, w: 20, h: 20, label: '📉', reason: 'Jumped for joy too early. Invisible wall! 📉' },
+      { x: 530, y: 170, w: 20, h: 20 },
+      { x: 3000, y: 190, w: 20, h: 20 },
     ],
     coins: [
       { x: 162, y: 135, type: 'base' },
@@ -289,12 +288,6 @@ function seededRandom(seed: number) {
   };
 }
 
-const DAILY_TROLL_REASONS = [
-  'Bonked an invisible block mid-jump. Classic daily rug! 😈',
-  'Today\'s gas spike froze you over the pit! ⛽',
-  'Invisible wall. The daily dev saw you coming! 📉',
-];
-
 export function dailyLevel(day: number): Level {
   const rand = seededRandom(Math.imul(day, 2654435761));
   const int = (min: number, max: number) => min + Math.floor(rand() * (max - min + 1));
@@ -322,8 +315,11 @@ export function dailyLevel(day: number): Level {
         platforms.push(block(x + Math.round(gap / 2) - 17, 195, 'hollow_column', 35, 45));
       } else if (trollBlocks.length < 2 && chance(0.5)) {
         trollBlocks.push({
-          x: x + Math.round(gap / 2) - 10, y: 170, w: 20, h: 20, label: '😈',
-          reason: DAILY_TROLL_REASONS[trollBlocks.length % DAILY_TROLL_REASONS.length],
+          x: x + Math.round(gap / 2) - 10,
+          y: 170,
+          w: 20,
+          h: 20,
+          ...(trollBlocks.length % 3 === 1 ? { gas: true } : {}),
         });
       }
     }

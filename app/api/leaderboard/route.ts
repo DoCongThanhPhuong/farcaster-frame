@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@farcaster/quick-auth';
 import { dailyLevel, dailyNumber, maxScore } from '@/lib/levels';
 import { getDailyTop, getPlayerStanding, isLeaderboardConfigured, submitDailyScore } from '@/lib/leaderboard';
+import { resolveBaseUrl } from '@/lib/url';
 
 const quickAuth = createClient();
 const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{0,31}$/i;
@@ -11,10 +12,7 @@ const notConfigured = () =>
   NextResponse.json({ configured: false, error: 'Leaderboard is not configured' }, { status: 503 });
 
 // The Quick Auth token is bound to the mini app's domain, so verify against the same host the manifest advertises.
-function appDomain(req: Request) {
-  const host = process.env.NEXT_PUBLIC_HOST || req.headers.get('x-forwarded-host') || req.headers.get('host') || '';
-  return new URL(host.startsWith('http') ? host : `https://${host}`).host;
-}
+const appDomain = (req: Request) => new URL(resolveBaseUrl(req.headers)).host;
 
 async function authenticatedFid(req: Request): Promise<number | null> {
   const auth = req.headers.get('authorization');

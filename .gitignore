@@ -8,4 +8,5 @@ out
 
 # GitNexus
 .gitnexus/
-.claude/skills/gitnexus/
+.claude/
+*.tsbuildinfo
